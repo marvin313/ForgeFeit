@@ -4,7 +4,10 @@ import 'package:forgefit/core/config/app_configuration.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class BootstrapResult {
-  const BootstrapResult({required this.configuration, this.client});
+  const BootstrapResult({
+    required this.configuration,
+    this.client,
+  });
 
   final AppConfiguration configuration;
   final SupabaseClient? client;
@@ -13,18 +16,29 @@ class BootstrapResult {
 }
 
 final bootstrapProvider = FutureProvider<BootstrapResult>((ref) async {
-  try {
-    await dotenv.load(fileName: '.env');
-  } on Object {
-    return BootstrapResult(
-      configuration: AppConfiguration.failure(
-        'ForgeFit could not load its .env configuration file. Copy '
-        '.env.example to .env, add your Supabase values, and restart the app.',
-      ),
-    );
+  const dartDefineUrl = String.fromEnvironment('SUPABASE_URL');
+  const dartDefineKey =
+      String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY');
+
+  var url = dartDefineUrl.trim();
+  var key = dartDefineKey.trim();
+
+  // Local development fallback only.
+  if (url.isEmpty || key.isEmpty) {
+    try {
+      await dotenv.load(fileName: '.env');
+      url = dotenv.env['SUPABASE_URL']?.trim() ?? '';
+      key = dotenv.env['SUPABASE_PUBLISHABLE_KEY']?.trim() ?? '';
+    } on Object {
+      // The validation below will show a useful configuration error.
+    }
   }
 
-  final configuration = AppConfiguration.fromEnvironment(dotenv.env);
+  final configuration = AppConfiguration.fromValues(
+    url: url,
+    key: key,
+  );
+
   if (!configuration.isValid) {
     return BootstrapResult(configuration: configuration);
   }
@@ -34,6 +48,7 @@ final bootstrapProvider = FutureProvider<BootstrapResult>((ref) async {
       url: configuration.supabaseUrl!,
       publishableKey: configuration.supabasePublishableKey!,
     );
+
     return BootstrapResult(
       configuration: configuration,
       client: Supabase.instance.client,
@@ -41,8 +56,8 @@ final bootstrapProvider = FutureProvider<BootstrapResult>((ref) async {
   } on Object {
     return BootstrapResult(
       configuration: AppConfiguration.failure(
-        'ForgeFit could not start its secure Supabase connection. Check the '
-        'URL and publishable key in .env, then restart the app.',
+        'ForgeFit could not start its secure Supabase connection. '
+        'Check the Project URL and publishable key, then restart the app.',
       ),
     );
   }

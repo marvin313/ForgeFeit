@@ -9,11 +9,18 @@ class AppConfiguration {
     final url = environment['SUPABASE_URL']?.trim() ?? '';
     final key = environment['SUPABASE_PUBLISHABLE_KEY']?.trim() ?? '';
 
+    return AppConfiguration.fromValues(url: url, key: key);
+  }
+
+  factory AppConfiguration.fromValues({
+    required String url,
+    required String key,
+  }) {
     if (url.isEmpty || key.isEmpty) {
       return const AppConfiguration._(
         problem:
             'ForgeFit is not connected to Supabase yet. Add both required '
-            'values to the .env file, then restart the app.',
+            'Supabase values, then restart the app.',
       );
     }
 
@@ -21,8 +28,10 @@ class AppConfiguration {
     final isLocalHost = uri?.host == 'localhost' || uri?.host == '127.0.0.1';
     final hasSupportedScheme =
         uri?.scheme == 'https' || (isLocalHost && uri?.scheme == 'http');
+
     final looksLikeUrlPlaceholder =
         url.contains('your-project') || url.contains('example.supabase.co');
+
     final looksLikeKeyPlaceholder =
         key.contains('your-publishable-key') ||
         key.contains('publishable-key-for-local-build-only') ||
@@ -35,13 +44,15 @@ class AppConfiguration {
         looksLikeKeyPlaceholder) {
       return const AppConfiguration._(
         problem:
-            'The Supabase values in .env are placeholders or are not valid. '
-            'Copy the project URL and publishable key from your Supabase '
-            'project settings, then restart ForgeFit.',
+            'The Supabase values are placeholders or invalid. Check the '
+            'Project URL and publishable key, then restart ForgeFit.',
       );
     }
 
-    return AppConfiguration._(supabaseUrl: url, supabasePublishableKey: key);
+    return AppConfiguration._(
+      supabaseUrl: url,
+      supabasePublishableKey: key,
+    );
   }
 
   factory AppConfiguration.failure(String problem) {

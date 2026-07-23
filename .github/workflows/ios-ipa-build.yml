@@ -29,15 +29,17 @@ jobs:
       - name: Install Flutter dependencies
         run: flutter pub get
 
-      - name: Create build configuration
+      - name: Create test configuration
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
         run: |
-          configured_url="${SUPABASE_URL:-https://example.supabase.co}"
-          configured_key="${SUPABASE_PUBLISHABLE_KEY:-publishable-key-for-build-only}"
+          if [[ -z "$SUPABASE_URL" || -z "$SUPABASE_PUBLISHABLE_KEY" ]]; then
+            echo "Missing SUPABASE_URL or SUPABASE_PUBLISHABLE_KEY repository secret." >&2
+            exit 1
+          fi
           printf 'SUPABASE_URL=%s\nSUPABASE_PUBLISHABLE_KEY=%s\n' \
-            "$configured_url" "$configured_key" > .env
+            "$SUPABASE_URL" "$SUPABASE_PUBLISHABLE_KEY" > .env
 
       - name: Generate Drift and Dart sources
         run: dart run build_runner build --delete-conflicting-outputs
@@ -63,7 +65,13 @@ jobs:
         run: flutter analyze
 
       - name: Build iOS Release without code signing
-        run: flutter build ios --release --no-codesign
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          flutter build ios --release --no-codesign \
+            --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+            --dart-define=SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY"
 
       - name: Package unsigned IPA
         run: |
