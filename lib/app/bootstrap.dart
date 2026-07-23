@@ -4,10 +4,7 @@ import 'package:forgefit/core/config/app_configuration.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class BootstrapResult {
-  const BootstrapResult({
-    required this.configuration,
-    this.client,
-  });
+  const BootstrapResult({required this.configuration, this.client});
 
   final AppConfiguration configuration;
   final SupabaseClient? client;
@@ -16,29 +13,29 @@ class BootstrapResult {
 }
 
 final bootstrapProvider = FutureProvider<BootstrapResult>((ref) async {
-  const dartDefineUrl = String.fromEnvironment('SUPABASE_URL');
-  const dartDefineKey =
-      String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY');
+  const definedUrl = String.fromEnvironment('SUPABASE_URL');
+  const definedKey = String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY');
 
-  var url = dartDefineUrl.trim();
-  var key = dartDefineKey.trim();
+  var url = definedUrl.trim();
+  var key = definedKey.trim();
 
-  // Local development fallback only.
+  // GitHub release builds receive compile-time dart defines. Local
+  // development can continue using the ignored .env file as a fallback.
   if (url.isEmpty || key.isEmpty) {
     try {
       await dotenv.load(fileName: '.env');
-      url = dotenv.env['SUPABASE_URL']?.trim() ?? '';
-      key = dotenv.env['SUPABASE_PUBLISHABLE_KEY']?.trim() ?? '';
+      if (url.isEmpty) {
+        url = dotenv.env['SUPABASE_URL']?.trim() ?? '';
+      }
+      if (key.isEmpty) {
+        key = dotenv.env['SUPABASE_PUBLISHABLE_KEY']?.trim() ?? '';
+      }
     } on Object {
-      // The validation below will show a useful configuration error.
+      // AppConfiguration below produces the user-facing validation message.
     }
   }
 
-  final configuration = AppConfiguration.fromValues(
-    url: url,
-    key: key,
-  );
-
+  final configuration = AppConfiguration.fromValues(url: url, key: key);
   if (!configuration.isValid) {
     return BootstrapResult(configuration: configuration);
   }
@@ -48,7 +45,6 @@ final bootstrapProvider = FutureProvider<BootstrapResult>((ref) async {
       url: configuration.supabaseUrl!,
       publishableKey: configuration.supabasePublishableKey!,
     );
-
     return BootstrapResult(
       configuration: configuration,
       client: Supabase.instance.client,
@@ -56,8 +52,8 @@ final bootstrapProvider = FutureProvider<BootstrapResult>((ref) async {
   } on Object {
     return BootstrapResult(
       configuration: AppConfiguration.failure(
-        'ForgeFit could not start its secure Supabase connection. '
-        'Check the Project URL and publishable key, then restart the app.',
+        'ForgeFit could not start its secure Supabase connection. Check the '
+        'Project URL and publishable key, then restart the app.',
       ),
     );
   }

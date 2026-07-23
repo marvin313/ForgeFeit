@@ -650,8 +650,10 @@ For a cloud-aware build, add these repository Actions secrets:
 - `SUPABASE_URL`
 - `SUPABASE_PUBLISHABLE_KEY`
 
-Use the same client-safe values as local configuration. Do not add privileged
-server credentials.
+Use the same client-safe values as local configuration. The workflow passes
+them to the iOS release build as compile-time `--dart-define` values, while
+the ignored `.env` file remains available only as a local-development and
+test fallback. Do not add privileged server credentials.
 
 To run the workflow:
 
@@ -666,8 +668,9 @@ The iOS compile is not verified until the workflow completes successfully. A
 Windows development machine cannot perform this Xcode build, so a local
 Windows test run is not evidence that the iOS step passed.
 
-When Actions secrets are absent, the workflow writes non-production placeholder
-configuration only to verify compilation and packaging. That artifact cannot
+When either Actions secret is absent, the workflow stops before compiling so it
+cannot produce an IPA that opens with missing configuration. A successfully
+built artifact receives both client-safe values at compile time and can
 authenticate or sync with a real project even after it is signed.
 
 ## Manual Stage 1 verification

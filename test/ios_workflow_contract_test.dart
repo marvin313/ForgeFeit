@@ -35,5 +35,19 @@ void main() {
     expect(workflow, contains('build/ios/ipa/Payload'));
     expect(workflow, contains('ForgeFit-unsigned.ipa'));
     expect(workflow, contains('actions/upload-artifact@v4'));
+    expect(
+      workflow,
+      contains('--dart-define=SUPABASE_URL="\$SUPABASE_URL"'),
+    );
+    expect(
+      workflow,
+      contains(
+        '--dart-define=SUPABASE_PUBLISHABLE_KEY="\$SUPABASE_PUBLISHABLE_KEY"',
+      ),
+    );
+    expect(
+      workflow,
+      contains('Missing SUPABASE_URL or SUPABASE_PUBLISHABLE_KEY'),
+    );
   });
 }

@@ -44,10 +44,8 @@ jobs:
       - name: Generate Drift and Dart sources
         run: dart run build_runner build --delete-conflicting-outputs
 
-      - name: Format and check Dart source
-        run: |
-          dart format lib/app/bootstrap.dart lib/core/config/app_configuration.dart
-          dart format --output=none --set-exit-if-changed lib test
+      - name: Check Dart formatting
+        run: dart format --output=none --set-exit-if-changed lib test
 
       - name: Prepare Flutter iOS artifacts
         run: flutter precache --ios

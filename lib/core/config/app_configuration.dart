@@ -6,17 +6,20 @@ class AppConfiguration {
   });
 
   factory AppConfiguration.fromEnvironment(Map<String, String> environment) {
-    final url = environment['SUPABASE_URL']?.trim() ?? '';
-    final key = environment['SUPABASE_PUBLISHABLE_KEY']?.trim() ?? '';
-
-    return AppConfiguration.fromValues(url: url, key: key);
+    return AppConfiguration.fromValues(
+      url: environment['SUPABASE_URL'] ?? '',
+      key: environment['SUPABASE_PUBLISHABLE_KEY'] ?? '',
+    );
   }
 
   factory AppConfiguration.fromValues({
     required String url,
     required String key,
   }) {
-    if (url.isEmpty || key.isEmpty) {
+    final trimmedUrl = url.trim();
+    final trimmedKey = key.trim();
+
+    if (trimmedUrl.isEmpty || trimmedKey.isEmpty) {
       return const AppConfiguration._(
         problem:
             'ForgeFit is not connected to Supabase yet. Add both required '
@@ -24,18 +27,17 @@ class AppConfiguration {
       );
     }
 
-    final uri = Uri.tryParse(url);
+    final uri = Uri.tryParse(trimmedUrl);
     final isLocalHost = uri?.host == 'localhost' || uri?.host == '127.0.0.1';
     final hasSupportedScheme =
         uri?.scheme == 'https' || (isLocalHost && uri?.scheme == 'http');
-
     final looksLikeUrlPlaceholder =
-        url.contains('your-project') || url.contains('example.supabase.co');
-
+        trimmedUrl.contains('your-project') ||
+        trimmedUrl.contains('example.supabase.co');
     final looksLikeKeyPlaceholder =
-        key.contains('your-publishable-key') ||
-        key.contains('publishable-key-for-local-build-only') ||
-        key.toLowerCase().contains('replace-me');
+        trimmedKey.contains('your-publishable-key') ||
+        trimmedKey.contains('publishable-key-for-build-only') ||
+        trimmedKey.toLowerCase().contains('replace-me');
 
     if (uri == null ||
         !uri.hasAuthority ||
@@ -44,14 +46,14 @@ class AppConfiguration {
         looksLikeKeyPlaceholder) {
       return const AppConfiguration._(
         problem:
-            'The Supabase values are placeholders or invalid. Check the '
-            'Project URL and publishable key, then restart ForgeFit.',
+            'The Supabase Project URL or publishable key is invalid. Check '
+            'both values, then restart ForgeFit.',
       );
     }
 
     return AppConfiguration._(
-      supabaseUrl: url,
-      supabasePublishableKey: key,
+      supabaseUrl: trimmedUrl,
+      supabasePublishableKey: trimmedKey,
     );
   }
 
