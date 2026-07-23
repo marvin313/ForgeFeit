@@ -5,59 +5,40 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forgefit/app/forgefit_app.dart';
 
-final ValueNotifier<_FatalAppError?> _fatalError =
-    ValueNotifier<_FatalAppError?>(null);
+final _fatalStartupError = ValueNotifier<Object?>(null);
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
-    _fatalError.value = _FatalAppError(
-      details.exceptionAsString(),
-      details.stack?.toString() ?? '',
-    );
+    _fatalStartupError.value ??= details.exception;
   };
-
-  PlatformDispatcher.instance.onError = (error, stack) {
-    _fatalError.value = _FatalAppError(error.toString(), stack.toString());
+  PlatformDispatcher.instance.onError = (error, _) {
+    _fatalStartupError.value ??= error;
     return true;
   };
 
-  ErrorWidget.builder = (details) {
-    return _DiagnosticErrorView(
-      title: 'ForgeFit screen error',
-      message: details.exceptionAsString(),
-      stack: details.stack?.toString() ?? '',
-    );
-  };
-
   runZonedGuarded(
-    () => runApp(const _DiagnosticRoot()),
-    (error, stack) {
-      _fatalError.value = _FatalAppError(error.toString(), stack.toString());
-    },
+    () => runApp(const _ForgeFitRoot()),
+    (error, _) => _fatalStartupError.value ??= error,
   );
 }
 
-class _DiagnosticRoot extends StatelessWidget {
-  const _DiagnosticRoot();
+class _ForgeFitRoot extends StatelessWidget {
+  const _ForgeFitRoot();
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<_FatalAppError?>(
-      valueListenable: _fatalError,
-      builder: (context, error, child) {
+    return ValueListenableBuilder<Object?>(
+      valueListenable: _fatalStartupError,
+      builder: (context, error, _) {
         if (error != null) {
           return MaterialApp(
+            title: 'ForgeFit',
             debugShowCheckedModeBanner: false,
             theme: ThemeData.dark(useMaterial3: true),
-            home: Scaffold(
-              body: _DiagnosticErrorView(
-                title: 'ForgeFit startup error',
-                message: error.message,
-                stack: error.stack,
-              ),
+            home: _StartupFailureScreen(
+              errorType: error.runtimeType.toString(),
             ),
           );
         }
@@ -67,84 +48,44 @@ class _DiagnosticRoot extends StatelessWidget {
   }
 }
 
-class _FatalAppError {
-  const _FatalAppError(this.message, this.stack);
+class _StartupFailureScreen extends StatelessWidget {
+  const _StartupFailureScreen({required this.errorType});
 
-  final String message;
-  final String stack;
-}
-
-class _DiagnosticErrorView extends StatelessWidget {
-  const _DiagnosticErrorView({
-    required this.title,
-    required this.message,
-    required this.stack,
-  });
-
-  final String title;
-  final String message;
-  final String stack;
+  final String errorType;
 
   @override
   Widget build(BuildContext context) {
-    final stackLines = stack
-        .split('\n')
-        .where((line) => line.trim().isNotEmpty)
-        .take(18)
-        .join('\n');
-
-    return ColoredBox(
-      color: const Color(0xFF090B0E),
-      child: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Icon(
-                Icons.error_outline_rounded,
-                color: Color(0xFFFF6B78),
-                size: 56,
-              ),
-              const SizedBox(height: 18),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w900,
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.error_outline_rounded,
+                  color: Color(0xFFFF6B78),
+                  size: 54,
                 ),
-              ),
-              const SizedBox(height: 18),
-              const Text(
-                'Take a screenshot of this page and send it in the chat.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Color(0xFFA7B0BB), height: 1.4),
-              ),
-              const SizedBox(height: 22),
-              SelectableText(
-                message,
-                style: const TextStyle(
-                  color: Color(0xFFFFC4CA),
-                  fontFamily: 'monospace',
-                  fontSize: 13,
-                  height: 1.45,
-                ),
-              ),
-              if (stackLines.isNotEmpty) ...[
                 const SizedBox(height: 18),
-                SelectableText(
-                  stackLines,
-                  style: const TextStyle(
-                    color: Color(0xFF9CA6B2),
-                    fontFamily: 'monospace',
-                    fontSize: 11,
-                    height: 1.35,
-                  ),
+                Text(
+                  'ForgeFit could not finish starting',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
                 ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Close the app, install the latest build, and try again. '
+                  'If this continues, share this reference with support.',
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 14),
+                Text('Reference: $errorType'),
               ],
-            ],
+            ),
           ),
         ),
       ),

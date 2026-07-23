@@ -29,7 +29,7 @@ jobs:
       - name: Install Flutter dependencies
         run: flutter pub get
 
-      - name: Create test configuration
+      - name: Validate release configuration
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
@@ -39,16 +39,8 @@ jobs:
             exit 1
           fi
 
-          printf 'SUPABASE_URL=%s\nSUPABASE_PUBLISHABLE_KEY=%s\n' \
-            "$SUPABASE_URL" "$SUPABASE_PUBLISHABLE_KEY" > .env
-
       - name: Generate Drift and Dart sources
-        run: dart run build_runner build --delete-conflicting-outputs
-
-      - name: Format changed Dart files
-        run: |
-          dart format lib/main.dart
-          dart format test/ios_workflow_contract_test.dart
+        run: dart run build_runner build
 
       - name: Check Dart formatting
         run: dart format --output=none --set-exit-if-changed lib test

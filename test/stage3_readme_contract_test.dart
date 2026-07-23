@@ -35,7 +35,9 @@ void main() {
 
   test('documents configuration and iOS verification boundaries', () {
     expect(readme, contains('SUPABASE_PUBLISHABLE_KEY'));
-    expect(readme, contains('`.env` and `.env.*` are ignored by Git'));
+    expect(readme, contains('`.env.*` remain ignored by Git'));
+    expect(readme, contains('--dart-define'));
+    expect(readme, contains('bundle `.env`.'));
     expect(readme, contains('Build unsigned iOS IPA'));
     expect(
       readme,

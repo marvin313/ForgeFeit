@@ -563,30 +563,30 @@ privileged SQL role; use two real authenticated client sessions.
 
 ## Configure the app without committing credentials
 
-Copy the safe template file.
+ForgeFit does not load a runtime `.env` file or bundle one into an iOS app.
+Instead, pass the project URL and client-safe publishable key with
+`--dart-define` whenever you run or build the app. This prevents an IPA from
+depending on a generated asset that could be missing or stale.
 
-macOS or Linux:
+The URL and publishable key are necessarily visible to a mobile client. They
+are not Supabase secrets: Row Level Security is the security boundary. Never
+provide a `service_role` key, secret key, database password, or Apple signing
+material through a Dart define.
+
+The tracked `.env.example` is only a safe reference template. `.env` and
+`.env.*` remain ignored by Git and are never used by ForgeFit at runtime.
+
+For a local run, use your actual Supabase project values:
 
 ```sh
-cp .env.example .env
+flutter run -d DEVICE_ID \
+  --dart-define=SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co \
+  --dart-define=SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_CLIENT_KEY
 ```
 
-Windows PowerShell:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-Set only the client-safe values:
-
-```dotenv
-SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
-SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_OR_ANON_CLIENT_KEY
-```
-
-Do not add quotes or trailing spaces. `.env` and `.env.*` are ignored by Git,
-while `.env.example` contains placeholders and remains tracked. Before sharing
-or committing the project, verify that `.env` is not staged:
+On PowerShell, use the same arguments on one line. Do not commit the real
+values, even though the publishable key is client-safe. Before sharing or
+committing the project, verify that `.env` is not staged:
 
 ```sh
 git status --short
@@ -598,7 +598,9 @@ On macOS, list devices and launch ForgeFit:
 
 ```sh
 flutter devices
-flutter run -d DEVICE_ID
+flutter run -d DEVICE_ID \
+  --dart-define=SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co \
+  --dart-define=SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_CLIENT_KEY
 ```
 
 The first launch shows onboarding. Enter a non-empty name, choose `kg` or `lb`,
@@ -612,7 +614,7 @@ login rather than showing onboarding again.
 Run these from the ForgeFit root after changes:
 
 ```sh
-dart run build_runner build --delete-conflicting-outputs
+dart run build_runner build
 dart format --output=none --set-exit-if-changed lib test
 flutter analyze
 flutter test
@@ -628,7 +630,9 @@ you intentionally need to apply formatting.
 On macOS:
 
 ```sh
-flutter build ios --release --no-codesign
+flutter build ios --release --no-codesign \
+  --dart-define=SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co \
+  --dart-define=SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_CLIENT_KEY
 ```
 
 The result is `build/ios/iphoneos/Runner.app`. An unsigned app cannot be
@@ -650,10 +654,10 @@ For a cloud-aware build, add these repository Actions secrets:
 - `SUPABASE_URL`
 - `SUPABASE_PUBLISHABLE_KEY`
 
-Use the same client-safe values as local configuration. The workflow passes
-them to the iOS release build as compile-time `--dart-define` values, while
-the ignored `.env` file remains available only as a local-development and
-test fallback. Do not add privileged server credentials.
+Use the same client-safe values as local configuration. The workflow fails
+before its Release build when either secret is missing, then passes both values
+only to `flutter build ios` as compile-time Dart defines. It does not create or
+bundle `.env`. Do not add privileged server credentials.
 
 To run the workflow:
 
@@ -668,10 +672,8 @@ The iOS compile is not verified until the workflow completes successfully. A
 Windows development machine cannot perform this Xcode build, so a local
 Windows test run is not evidence that the iOS step passed.
 
-When either Actions secret is absent, the workflow stops before compiling so it
-cannot produce an IPA that opens with missing configuration. A successfully
-built artifact receives both client-safe values at compile time and can
-authenticate or sync with a real project even after it is signed.
+When either Actions secret is absent, the workflow deliberately stops before
+building an IPA. Add both client-safe repository secrets before dispatching it.
 
 ## Manual Stage 1 verification
 

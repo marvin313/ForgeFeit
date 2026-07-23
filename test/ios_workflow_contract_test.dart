@@ -9,9 +9,7 @@ void main() {
     ).readAsStringSync();
 
     final dependencyIndex = workflow.indexOf('flutter pub get');
-    final generationIndex = workflow.indexOf(
-      'dart run build_runner build --delete-conflicting-outputs',
-    );
+    final generationIndex = workflow.indexOf('dart run build_runner build');
     final formattingIndex = workflow.indexOf(
       'dart format --output=none --set-exit-if-changed lib test',
     );
@@ -35,10 +33,7 @@ void main() {
     expect(workflow, contains('build/ios/ipa/Payload'));
     expect(workflow, contains('ForgeFit-unsigned.ipa'));
     expect(workflow, contains('actions/upload-artifact@v4'));
-    expect(
-      workflow,
-      contains('--dart-define=SUPABASE_URL="\$SUPABASE_URL"'),
-    );
+    expect(workflow, contains('--dart-define=SUPABASE_URL="\$SUPABASE_URL"'));
     expect(
       workflow,
       contains(
@@ -49,5 +44,6 @@ void main() {
       workflow,
       contains('Missing SUPABASE_URL or SUPABASE_PUBLISHABLE_KEY'),
     );
+    expect(workflow, isNot(contains('> .env')));
   });
 }

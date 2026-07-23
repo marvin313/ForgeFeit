@@ -17,7 +17,7 @@ class ForgeFitApp extends ConsumerWidget {
       error: (_, _) => _materialApp(
         _ConfigurationScreen(
           message:
-              'ForgeFit could not read its startup configuration. Check .env and restart the app.',
+              'ForgeFit could not read its release build configuration. Reinstall a build made with valid Supabase values.',
           onRetry: () => ref.invalidate(bootstrapProvider),
         ),
       ),
