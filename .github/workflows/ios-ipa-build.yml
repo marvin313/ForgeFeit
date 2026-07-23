@@ -38,11 +38,17 @@ jobs:
             echo "Missing SUPABASE_URL or SUPABASE_PUBLISHABLE_KEY repository secret." >&2
             exit 1
           fi
+
           printf 'SUPABASE_URL=%s\nSUPABASE_PUBLISHABLE_KEY=%s\n' \
             "$SUPABASE_URL" "$SUPABASE_PUBLISHABLE_KEY" > .env
 
       - name: Generate Drift and Dart sources
         run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Format changed Dart files
+        run: |
+          dart format lib/main.dart
+          dart format test/ios_workflow_contract_test.dart
 
       - name: Check Dart formatting
         run: dart format --output=none --set-exit-if-changed lib test
