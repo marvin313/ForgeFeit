@@ -12,6 +12,10 @@ class RegistrationResult {
 class AuthRepository {
   const AuthRepository(this._client);
 
+  /// The iOS URL scheme registered by Runner. Supabase Flutter receives this
+  /// callback and exchanges the confirmation token for a session.
+  static const authCallbackUrl = 'com.marvin.forgefit://auth/callback';
+
   final SupabaseClient _client;
 
   Stream<AuthState> get authStateChanges => _client.auth.onAuthStateChange;
@@ -29,6 +33,7 @@ class AuthRepository {
     final response = await _client.auth.signUp(
       email: email.trim(),
       password: password,
+      emailRedirectTo: authCallbackUrl,
       data: <String, Object>{
         'display_name': displayName.trim(),
         'preferred_weight_unit': preferredWeightUnit,
@@ -68,7 +73,7 @@ class AuthRepository {
   Future<void> sendPasswordReset(String email) {
     return _client.auth.resetPasswordForEmail(
       email.trim(),
-      redirectTo: 'com.marvin.forgefit://reset-password',
+      redirectTo: authCallbackUrl,
     );
   }
 

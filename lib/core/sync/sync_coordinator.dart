@@ -234,7 +234,7 @@ class SyncCoordinator {
           await _repository.upload(upload);
           await _repository.completeUpload(upload.queueId);
         } catch (error) {
-          final message = _readableError(error);
+          final message = readableSyncError(error);
           await _repository.recordUploadFailure(upload.queueId, message);
           pending = await _pendingCount(userId);
           if (_isLikelyNetworkError(error)) {
@@ -265,20 +265,18 @@ class SyncCoordinator {
               upload.entityVersion,
             );
           } catch (error) {
-            final message = _readableError(error);
+            final message = readableSyncError(error);
             await planningRepository.recordUploadFailure(
               upload.queueId,
               upload.entityVersion,
               message,
             );
             pending = await _pendingCount(userId);
-            _emit(
-              _isLikelyNetworkError(error)
-                  ? SyncStatus.changesWaiting(pending, message)
-                  : SyncStatus.syncFailed(pending, message),
-            );
-            _scheduleRetry(userId);
-            return;
+            // Planning and completed-workout outboxes are independent. A
+            // template failure must not prevent an already-finished workout
+            // from reaching the cloud and being recoverable after reinstall.
+            deferredFailure ??= message;
+            break;
           }
 
           pending = await _pendingCount(userId);
@@ -296,7 +294,7 @@ class SyncCoordinator {
             await sessionRepository.uploadPending(upload);
             await sessionRepository.markUploadSucceeded(upload);
           } catch (error) {
-            final message = _readableError(error);
+            final message = readableSyncError(error);
             await sessionRepository.markUploadFailed(upload, error);
             pending = await _pendingCount(userId);
             _emit(
@@ -329,7 +327,7 @@ class SyncCoordinator {
         _rerunRequested = true;
       }
     } catch (error) {
-      final message = _readableError(error);
+      final message = readableSyncError(error);
       _emit(
         _isLikelyNetworkError(error)
             ? SyncStatus.changesWaiting(pending, message)
@@ -409,9 +407,24 @@ class SyncCoordinator {
   }
 }
 
-String _readableError(Object error) {
-  final message = error.toString().trim();
-  return message.isEmpty ? 'ForgeFit sync failed. Please try again.' : message;
+/// Produces a safe status message without exposing request URLs, credentials,
+/// session details, or server payloads in the app interface.
+String readableSyncError(Object error) {
+  final message = error.toString().toLowerCase();
+  if (message.contains('pgrst205') ||
+      message.contains('could not find the table') ||
+      message.contains('schema cache')) {
+    return 'Cloud workout storage is not ready. Apply the Stage 3 Supabase migration, then retry.';
+  }
+  if (message.contains('row-level security') ||
+      message.contains('permission denied') ||
+      message.contains('not authorized')) {
+    return 'ForgeFit could not authorize this cloud change. Sign in again and retry.';
+  }
+  if (_isLikelyNetworkError(error)) {
+    return 'No connection (offline) right now. Your changes are saved on this device and will retry automatically.';
+  }
+  return 'ForgeFit could not sync this change yet. It remains saved on this device and will retry automatically.';
 }
 
 bool _isLikelyNetworkError(Object error) {

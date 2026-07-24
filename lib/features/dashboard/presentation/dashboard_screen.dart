@@ -129,14 +129,14 @@ class DashboardScreen extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 24),
-                workouts.when(
+                completedSessions.when(
                   loading: () => const _SummaryLoading(),
                   error: (_, _) => _SummaryError(
-                    onRetry: () =>
-                        ref.invalidate(workoutHistoryProvider(userId)),
+                    onRetry: () => ref.invalidate(
+                      completedWorkoutSessionsProvider(userId),
+                    ),
                   ),
-                  data: (items) =>
-                      _WorkoutSummary(workouts: items, weightUnit: weightUnit),
+                  data: (items) => _WorkoutSummary(sessions: items),
                 ),
                 const SizedBox(height: 28),
                 Row(
@@ -534,30 +534,48 @@ class _RecentSessionCard extends StatelessWidget {
   }
 }
 
-class _WorkoutSummary extends StatelessWidget {
-  const _WorkoutSummary({required this.workouts, required this.weightUnit});
+class HomeWorkoutStatistics {
+  const HomeWorkoutStatistics({
+    required this.todayCount,
+    required this.allTimeCount,
+  });
 
-  final List<WorkoutEntry> workouts;
-  final String weightUnit;
+  final int todayCount;
+  final int allTimeCount;
+
+  factory HomeWorkoutStatistics.fromCompletedSessions(
+    List<CompletedWorkoutSession> sessions, {
+    DateTime? now,
+  }) {
+    final today = DateUtils.dateOnly((now ?? DateTime.now()).toLocal());
+    final todayCount = sessions
+        .where(
+          (session) => DateUtils.dateOnly(session.endedAt.toLocal()) == today,
+        )
+        .length;
+    return HomeWorkoutStatistics(
+      todayCount: todayCount,
+      allTimeCount: sessions.length,
+    );
+  }
+}
+
+class _WorkoutSummary extends StatelessWidget {
+  const _WorkoutSummary({required this.sessions});
+
+  final List<CompletedWorkoutSession> sessions;
 
   @override
   Widget build(BuildContext context) {
-    final today = DateUtils.dateOnly(DateTime.now());
-    final todayCount = workouts
-        .where(
-          (workout) =>
-              DateUtils.dateOnly(workout.performedAt.toLocal()) == today,
-        )
-        .length;
-    final totalReps = workouts.fold<int>(0, (sum, item) => sum + item.reps);
+    final statistics = HomeWorkoutStatistics.fromCompletedSessions(sessions);
     return Row(
       children: [
         Expanded(
           child: _MetricCard(
             icon: Icons.today_outlined,
             label: 'TODAY',
-            value: '$todayCount',
-            detail: todayCount == 1 ? 'workout' : 'workouts',
+            value: '${statistics.todayCount}',
+            detail: statistics.todayCount == 1 ? 'workout' : 'workouts',
           ),
         ),
         const SizedBox(width: 12),
@@ -565,8 +583,8 @@ class _WorkoutSummary extends StatelessWidget {
           child: _MetricCard(
             icon: Icons.repeat_rounded,
             label: 'ALL TIME',
-            value: '$totalReps',
-            detail: 'reps | $weightUnit',
+            value: '${statistics.allTimeCount}',
+            detail: statistics.allTimeCount == 1 ? 'workout' : 'workouts',
           ),
         ),
       ],

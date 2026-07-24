@@ -132,6 +132,37 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+    'summary Done removes the active-workout stack and returns home',
+    (tester) async {
+      await _setIPhoneSize(tester);
+      final repository = _FakeSessionRepository(fixture: fixture);
+
+      await tester.pumpWidget(
+        _app(_HomeRoute(fixture: fixture, repository: repository)),
+      );
+      await tester.tap(find.text('Open active workout'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Finish workout'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Finish review'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Workout complete'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('Done'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.text('Done'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('ForgeFit Home'), findsOneWidget);
+      expect(find.text('No active workout'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('personal records group current bests by exercise', (
     tester,
   ) async {
@@ -164,6 +195,78 @@ Widget _app(Widget home) => MaterialApp(
   theme: buildForgeFitTheme(),
   home: home,
 );
+
+class _HomeRoute extends StatelessWidget {
+  const _HomeRoute({required this.fixture, required this.repository});
+
+  final _SessionFixture fixture;
+  final _FakeSessionRepository repository;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    body: Center(
+      child: FilledButton(
+        onPressed: () => Navigator.of(context).push<void>(
+          MaterialPageRoute(
+            builder: (_) =>
+                _ActiveRoute(fixture: fixture, repository: repository),
+          ),
+        ),
+        child: const Text('Open active workout'),
+      ),
+    ),
+    appBar: AppBar(title: const Text('ForgeFit Home')),
+  );
+}
+
+class _ActiveRoute extends StatelessWidget {
+  const _ActiveRoute({required this.fixture, required this.repository});
+
+  final _SessionFixture fixture;
+  final _FakeSessionRepository repository;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    body: Center(
+      child: FilledButton(
+        onPressed: () => Navigator.of(context).push<void>(
+          MaterialPageRoute(
+            builder: (_) =>
+                _FinishReviewRoute(fixture: fixture, repository: repository),
+          ),
+        ),
+        child: const Text('Finish workout'),
+      ),
+    ),
+  );
+}
+
+class _FinishReviewRoute extends StatelessWidget {
+  const _FinishReviewRoute({required this.fixture, required this.repository});
+
+  final _SessionFixture fixture;
+  final _FakeSessionRepository repository;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    body: Center(
+      child: FilledButton(
+        onPressed: () => Navigator.of(context).pushReplacement<void, void>(
+          MaterialPageRoute(
+            builder: (_) => WorkoutSummaryScreen(
+              userId: fixture.userId,
+              weightUnit: 'kg',
+              repository: repository,
+              sessionId: fixture.completed.session.id,
+              initialSummary: fixture.summary,
+            ),
+          ),
+        ),
+        child: const Text('Finish review'),
+      ),
+    ),
+  );
+}
 
 Future<void> _setIPhoneSize(WidgetTester tester) async {
   tester.view.devicePixelRatio = 1;

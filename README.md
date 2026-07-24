@@ -397,8 +397,17 @@ Current Flutter projects may use Swift Package Manager and therefore have no
    confirmation is enabled, confirm the email before the first login.
 4. Copy the project URL and its publishable client key. An older project may
    label the client-safe key `anon`.
-5. In **Authentication > URL Configuration**, add
-   `com.marvin.forgefit://reset-password` for password recovery.
+5. In **Authentication > URL Configuration**, add the exact Redirect URL
+   `com.marvin.forgefit://auth/callback`. The iOS app already registers that
+   custom scheme, and Supabase Flutter handles the returned confirmation or
+   password-recovery token before the auth gate renders.
+6. Set **Site URL** to your production website if you have one. ForgeFit passes
+   the app callback explicitly for email flows, so this fallback URL is not
+   used for its confirmation links.
+
+Email confirmation can delay the first authenticated session, but it does not
+change Supabase Row Level Security. Once the user has a valid session, verified
+and password-authenticated accounts use the same owner-scoped sync policies.
 
 The Stage 1 registration trigger creates the user's profile from trusted sign-up
 metadata, including the display name and preferred unit, even when email
@@ -681,8 +690,9 @@ Use a unique test email against a migrated Supabase project:
 
 1. Complete onboarding, register, and confirm the email when required.
 2. Log in, force-close ForgeFit, reopen it, and confirm the session persists.
-3. Request a password-reset email and verify Supabase accepts the request and
-   opens the configured ForgeFit recovery link.
+3. Request a password-reset or confirmation email and verify it opens
+   `com.marvin.forgefit://auth/callback`, returns to ForgeFit, and completes
+   the authentication callback.
 4. Save a valid workout. Confirm it appears in history immediately and the sync
    status eventually becomes **Everything synced**.
 5. In Supabase, confirm exactly one `workouts` row and its `workout_sets` row use

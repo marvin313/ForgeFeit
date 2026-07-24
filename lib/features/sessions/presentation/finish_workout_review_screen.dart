@@ -48,12 +48,7 @@ class _FinishWorkoutReviewScreenState extends State<FinishWorkoutReviewScreen> {
       );
       widget.onLocalChangeQueued?.call();
       if (!mounted) return;
-      final callback = widget.onWorkoutFinished;
-      if (callback != null) {
-        callback(completed);
-        Navigator.pop(context);
-        return;
-      }
+      widget.onWorkoutFinished?.call(completed);
       await Navigator.of(context).pushReplacement<void, void>(
         MaterialPageRoute(
           builder: (_) => WorkoutSummaryScreen(
@@ -126,10 +121,9 @@ class _FinishWorkoutReviewScreenState extends State<FinishWorkoutReviewScreen> {
       0,
       (total, set) => total + (set.repetitions ?? 0),
     );
-    final volume = completed.fold<double>(
-      0,
-      (total, set) => total + set.volumeKg,
-    );
+    final volume = completed
+        .where((set) => set.setType != WorkoutSetType.warmUp)
+        .fold<double>(0, (total, set) => total + set.volumeKg);
     final elapsed = session.elapsedAt(DateTime.now());
 
     return Scaffold(

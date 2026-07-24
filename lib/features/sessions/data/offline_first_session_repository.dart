@@ -1077,21 +1077,21 @@ class OfflineFirstSessionRepository {
           .where((set) => set.sessionExerciseId == activeExercise.id)
           .toList(growable: false);
       final completedExerciseId = _newId();
-      final nonWarmup = sourceSets
+      final workingSets = sourceSets
           .where((set) => set.setType != WorkoutSetType.warmUp)
           .toList(growable: false);
-      final volumes = sourceSets
+      final volumes = workingSets
           .map(
             (set) => roundSessionMetric(
               (set.weightKg ?? 0) * (set.repetitions ?? 0),
             ),
           )
           .toList();
-      final estimates = nonWarmup
+      final estimates = workingSets
           .map((set) => set.estimatedOneRepMaxKg)
           .whereType<double>()
           .toList();
-      final weights = nonWarmup
+      final weights = workingSets
           .map((set) => set.weightKg)
           .whereType<double>()
           .toList();
@@ -1117,7 +1117,7 @@ class OfflineFirstSessionRepository {
         notes: activeExercise.notes,
         sortOrder: activeExercise.sortOrder,
         completedSetCount: sourceSets.length,
-        workingSetCount: nonWarmup.length,
+        workingSetCount: workingSets.length,
         totalRepetitions: sourceSets.fold(
           0,
           (total, set) => total + (set.repetitions ?? 0),
@@ -1169,7 +1169,7 @@ class OfflineFirstSessionRepository {
         );
       }
     }
-    final nonWarmupSets = completedActiveSets
+    final workingSets = completedActiveSets
         .where((set) => set.setType != WorkoutSetType.warmUp)
         .toList(growable: false);
     var completedSession = CompletedWorkoutSession(
@@ -1184,14 +1184,14 @@ class OfflineFirstSessionRepository {
       endedAt: finishedAt,
       durationSeconds: finishedAt.difference(activeSession.startedAt).inSeconds,
       exerciseCount: completedSetIds.length,
-      workingSetCount: nonWarmupSets.length,
+      workingSetCount: workingSets.length,
       totalCompletedSets: completedActiveSets.length,
       totalRepetitions: completedActiveSets.fold(
         0,
         (total, set) => total + (set.repetitions ?? 0),
       ),
       totalVolumeKg: roundSessionMetric(
-        completedActiveSets.fold(
+        workingSets.fold(
           0.0,
           (total, set) => total + (set.weightKg ?? 0) * (set.repetitions ?? 0),
         ),

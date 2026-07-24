@@ -314,7 +314,7 @@ void main() {
       expect(first.session.totalCompletedSets, 3);
       expect(first.session.workingSetCount, 2);
       expect(first.session.totalRepetitions, 25);
-      expect(first.session.totalVolumeKg, 2000);
+      expect(first.session.totalVolumeKg, 1400);
       expect(first.session.exerciseCount, 1);
       expect(first.session.personalRecordCount, 6);
       expect(first.session.notes, 'First full session');
@@ -457,6 +457,108 @@ void main() {
   );
 
   test(
+    'training volume uses completed working sets and explicit load only',
+    () async {
+      final barbell = await repository.startEmptyWorkout(
+        userId: 'user-a',
+        name: 'Volume checks',
+      );
+      final bench = await repository.addExercise(
+        userId: 'user-a',
+        sessionId: barbell.session.id,
+        exercise: SystemExerciseCatalog.byKey('barbell_bench_press')!,
+        configuration: const TemplateExerciseConfiguration(workingSets: 0),
+      );
+      for (final weight in const [80.0, 80.0, 80.0]) {
+        final set = await repository.addSet(
+          userId: 'user-a',
+          exerciseId: bench.id,
+          weightKg: weight,
+          repetitions: 8,
+        );
+        await repository.completeSet(
+          userId: 'user-a',
+          setId: set.id,
+          startAutomaticRestTimer: false,
+        );
+      }
+      final incomplete = await repository.addSet(
+        userId: 'user-a',
+        exerciseId: bench.id,
+        weightKg: 100,
+        repetitions: 10,
+      );
+      expect(incomplete.isCompleted, isFalse);
+      final varied = await repository.addSet(
+        userId: 'user-a',
+        exerciseId: bench.id,
+        weightKg: 60,
+        repetitions: 5,
+      );
+      await repository.completeSet(
+        userId: 'user-a',
+        setId: varied.id,
+        startAutomaticRestTimer: false,
+      );
+      final zeroWeight = await repository.addSet(
+        userId: 'user-a',
+        exerciseId: bench.id,
+        weightKg: 0,
+        repetitions: 15,
+      );
+      await repository.completeSet(
+        userId: 'user-a',
+        setId: zeroWeight.id,
+        startAutomaticRestTimer: false,
+      );
+      final completed = await repository.finishWorkout(
+        userId: 'user-a',
+        sessionId: barbell.session.id,
+      );
+      // 3 x 8 x 80 plus 5 x 60. The incomplete and zero-load sets add nothing.
+      expect(completed.session.totalVolumeKg, 2220);
+
+      final bodyweight = await repository.startEmptyWorkout(
+        userId: 'user-a',
+        name: 'Bodyweight checks',
+      );
+      final abRoller = await repository.addExercise(
+        userId: 'user-a',
+        sessionId: bodyweight.session.id,
+        exercise: SystemExerciseCatalog.byKey('ab_wheel_rollout')!,
+        configuration: const TemplateExerciseConfiguration(workingSets: 0),
+      );
+      final bodyweightSet = await repository.addSet(
+        userId: 'user-a',
+        exerciseId: abRoller.id,
+        repetitions: 12,
+      );
+      await repository.completeSet(
+        userId: 'user-a',
+        setId: bodyweightSet.id,
+        startAutomaticRestTimer: false,
+      );
+      final weightedBodyweightSet = await repository.addSet(
+        userId: 'user-a',
+        exerciseId: abRoller.id,
+        weightKg: 10,
+        repetitions: 12,
+      );
+      await repository.completeSet(
+        userId: 'user-a',
+        setId: weightedBodyweightSet.id,
+        startAutomaticRestTimer: false,
+      );
+      final bodyweightCompleted = await repository.finishWorkout(
+        userId: 'user-a',
+        sessionId: bodyweight.session.id,
+      );
+      // Bodyweight is not inferred as load; only explicitly entered added weight counts.
+      expect(bodyweightCompleted.session.totalVolumeKg, 120);
+    },
+  );
+
+  test(
     'custom exercise keeps its UUID snapshot and excludes incomplete and warm-up PRs',
     () async {
       const customId = 'custom-exercise-stable-id';
@@ -522,7 +624,7 @@ void main() {
 
       expect(completed.session.totalCompletedSets, 2);
       expect(completed.session.totalRepetitions, 30);
-      expect(completed.session.totalVolumeKg, 2000);
+      expect(completed.session.totalVolumeKg, 400);
       expect(completed.exercises.single.exerciseKey, customId);
       expect(completed.exercises.single.customExerciseId, customId);
       expect(completed.exercises.single.exerciseSource, ExerciseSource.custom);

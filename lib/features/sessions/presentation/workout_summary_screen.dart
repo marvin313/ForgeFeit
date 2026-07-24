@@ -54,7 +54,10 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
     if (callback != null) {
       callback();
     } else {
-      Navigator.maybePop(context);
+      // Finish review replaces itself with this route while the active-workout
+      // route remains below it. Remove the transient stack so Done always
+      // returns to the authenticated home shell.
+      Navigator.of(context).popUntil((route) => route.isFirst);
     }
   }
 
