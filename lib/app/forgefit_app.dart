@@ -4,6 +4,7 @@ import 'package:forgefit/app/auth_gate.dart';
 import 'package:forgefit/app/bootstrap.dart';
 import 'package:forgefit/app/branding.dart';
 import 'package:forgefit/app/providers.dart';
+import 'package:forgefit/app/startup_diagnostics.dart';
 import 'package:forgefit/core/theme/forgefit_theme.dart';
 
 class ForgeFitApp extends ConsumerWidget {
@@ -36,6 +37,7 @@ class ForgeFitApp extends ConsumerWidget {
         // dialog, and bottom sheet sees the configured client and repositories.
         return ProviderScope(
           overrides: [supabaseClientProvider.overrideWithValue(result.client!)],
+          observers: [startupProviderObserver],
           child: _materialApp(const AuthGate()),
         );
       },

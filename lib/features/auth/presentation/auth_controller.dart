@@ -66,4 +66,6 @@ class AuthController extends AsyncNotifier<void> {
 
 final authControllerProvider = AsyncNotifierProvider<AuthController, void>(
   AuthController.new,
+  dependencies: [authRepositoryProvider],
+  name: 'authControllerProvider',
 );

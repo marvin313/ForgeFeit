@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forgefit/app/forgefit_app.dart';
+import 'package:forgefit/app/startup_diagnostics.dart';
 
 final _fatalStartupError = ValueNotifier<Object?>(null);
 
@@ -19,7 +20,12 @@ void main() {
   };
 
   runZonedGuarded(
-    () => runApp(const _ForgeFitRoot()),
+    () => runApp(
+      ProviderScope(
+        observers: [startupProviderObserver],
+        child: const _ForgeFitRoot(),
+      ),
+    ),
     (error, _) => _fatalStartupError.value ??= error,
   );
 }
@@ -33,25 +39,24 @@ class _ForgeFitRoot extends StatelessWidget {
       valueListenable: _fatalStartupError,
       builder: (context, error, _) {
         if (error != null) {
+          final failure = startupDiagnostics.describe(error);
           return MaterialApp(
             title: 'ForgeFit',
             debugShowCheckedModeBanner: false,
             theme: ThemeData.dark(useMaterial3: true),
-            home: _StartupFailureScreen(
-              errorType: error.runtimeType.toString(),
-            ),
+            home: _StartupFailureScreen(failure: failure),
           );
         }
-        return const ProviderScope(child: ForgeFitApp());
+        return const ForgeFitApp();
       },
     );
   }
 }
 
 class _StartupFailureScreen extends StatelessWidget {
-  const _StartupFailureScreen({required this.errorType});
+  const _StartupFailureScreen({required this.failure});
 
-  final String errorType;
+  final StartupFailure failure;
 
   @override
   Widget build(BuildContext context) {
@@ -83,7 +88,10 @@ class _StartupFailureScreen extends StatelessWidget {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 14),
-                Text('Reference: $errorType'),
+                Text(
+                  'Reference: ${failure.providerName} / '
+                  '${failure.exceptionType}',
+                ),
               ],
             ),
           ),
