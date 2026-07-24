@@ -543,20 +543,58 @@ class HomeWorkoutStatistics {
   final int todayCount;
   final int allTimeCount;
 
+  /// Counts a device-local calendar day by comparing UTC instants against the
+  /// UTC boundaries of that local day. Tests can inject [localDayBounds] so
+  /// they never depend on the host runner's timezone.
   factory HomeWorkoutStatistics.fromCompletedSessions(
     List<CompletedWorkoutSession> sessions, {
     DateTime? now,
+    LocalDayBounds? localDayBounds,
   }) {
-    final today = DateUtils.dateOnly((now ?? DateTime.now()).toLocal());
-    final todayCount = sessions
-        .where(
-          (session) => DateUtils.dateOnly(session.endedAt.toLocal()) == today,
-        )
+    final bounds =
+        localDayBounds ??
+        LocalDayBounds.forDeviceLocalNow(now ?? DateTime.now());
+    final completedSessions = sessions
+        .where((session) => !session.isDeleted)
+        .toList(growable: false);
+    final todayCount = completedSessions
+        .where((session) => bounds.includes(session.endedAt))
         .length;
     return HomeWorkoutStatistics(
       todayCount: todayCount,
-      allTimeCount: sessions.length,
+      allTimeCount: completedSessions.length,
     );
+  }
+}
+
+/// The UTC instants that bound one user/device-local calendar day.
+class LocalDayBounds {
+  const LocalDayBounds({
+    required this.startInclusiveUtc,
+    required this.endExclusiveUtc,
+  });
+
+  final DateTime startInclusiveUtc;
+  final DateTime endExclusiveUtc;
+
+  factory LocalDayBounds.forDeviceLocalNow(DateTime now) {
+    final localNow = now.toLocal();
+    final startLocal = DateTime(localNow.year, localNow.month, localNow.day);
+    final nextStartLocal = DateTime(
+      localNow.year,
+      localNow.month,
+      localNow.day + 1,
+    );
+    return LocalDayBounds(
+      startInclusiveUtc: startLocal.toUtc(),
+      endExclusiveUtc: nextStartLocal.toUtc(),
+    );
+  }
+
+  bool includes(DateTime instant) {
+    final utcInstant = instant.toUtc();
+    return !utcInstant.isBefore(startInclusiveUtc) &&
+        utcInstant.isBefore(endExclusiveUtc);
   }
 }
 
