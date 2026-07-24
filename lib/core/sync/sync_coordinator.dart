@@ -218,6 +218,7 @@ class SyncCoordinator {
   Future<void> _runSync(String userId) async {
     var pending = 0;
     String? deferredFailure;
+    var deferredFailureIsNetwork = false;
     try {
       pending = await _pendingCount(userId);
       if (pending == 0) {
@@ -275,7 +276,10 @@ class SyncCoordinator {
             // Planning and completed-workout outboxes are independent. A
             // template failure must not prevent an already-finished workout
             // from reaching the cloud and being recoverable after reinstall.
-            deferredFailure ??= message;
+            if (deferredFailure == null) {
+              deferredFailure = message;
+              deferredFailureIsNetwork = _isLikelyNetworkError(error);
+            }
             break;
           }
 
@@ -315,7 +319,11 @@ class SyncCoordinator {
 
       pending = await _pendingCount(userId);
       if (deferredFailure case final message?) {
-        _emit(SyncStatus.syncFailed(pending, message));
+        _emit(
+          deferredFailureIsNetwork
+              ? SyncStatus.changesWaiting(pending, message)
+              : SyncStatus.syncFailed(pending, message),
+        );
         _scheduleRetry(userId);
       } else if (pending == 0) {
         _markSuccessfulSync();
