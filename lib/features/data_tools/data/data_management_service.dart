@@ -26,11 +26,8 @@ class DataExportFile {
 /// Versioned, local-only data tools. Backups intentionally exclude all
 /// credentials and outbox error strings; restore rebuilds safe durable queues.
 class DataManagementService {
-  DataManagementService({
-    required AppDatabase database,
-    DateTime Function()? clock,
-  }) : _database = database,
-       _clock = clock ?? DateTime.now;
+  DataManagementService({required this._database, DateTime Function()? clock})
+    : _clock = clock ?? DateTime.now;
 
   static const format = 'forgefit_backup';
   static const version = 1;
@@ -327,31 +324,48 @@ class DataManagementService {
 
   void _validateRowTypes(Map<String, List<Map<String, dynamic>>> data) {
     try {
-      for (final row in data['workouts']!) WorkoutRow.fromJson(row);
-      for (final row in data['workoutSets']!) WorkoutSetRow.fromJson(row);
-      for (final row in data['workoutSplits']!) WorkoutSplitRow.fromJson(row);
-      for (final row in data['customExercises']!)
+      for (final row in data['workouts']!) {
+        WorkoutRow.fromJson(row);
+      }
+      for (final row in data['workoutSets']!) {
+        WorkoutSetRow.fromJson(row);
+      }
+      for (final row in data['workoutSplits']!) {
+        WorkoutSplitRow.fromJson(row);
+      }
+      for (final row in data['customExercises']!) {
         CustomExerciseRow.fromJson(row);
-      for (final row in data['workoutTemplates']!)
+      }
+      for (final row in data['workoutTemplates']!) {
         WorkoutTemplateRow.fromJson(row);
-      for (final row in data['templateExercises']!)
+      }
+      for (final row in data['templateExercises']!) {
         TemplateExerciseRow.fromJson(row);
-      for (final row in data['activeWorkoutSessions']!)
+      }
+      for (final row in data['activeWorkoutSessions']!) {
         ActiveWorkoutSessionRow.fromJson(row);
-      for (final row in data['activeWorkoutExercises']!)
+      }
+      for (final row in data['activeWorkoutExercises']!) {
         ActiveWorkoutExerciseRow.fromJson(row);
-      for (final row in data['activeWorkoutSets']!)
+      }
+      for (final row in data['activeWorkoutSets']!) {
         ActiveWorkoutSetRow.fromJson(row);
-      for (final row in data['completedWorkoutSessions']!)
+      }
+      for (final row in data['completedWorkoutSessions']!) {
         CompletedWorkoutSessionRow.fromJson(row);
-      for (final row in data['completedWorkoutExercises']!)
+      }
+      for (final row in data['completedWorkoutExercises']!) {
         CompletedWorkoutExerciseRow.fromJson(row);
-      for (final row in data['completedWorkoutSets']!)
+      }
+      for (final row in data['completedWorkoutSets']!) {
         CompletedWorkoutSetRow.fromJson(row);
-      for (final row in data['personalRecords']!)
+      }
+      for (final row in data['personalRecords']!) {
         PersonalRecordRow.fromJson(row);
-      for (final row in data['personalRecordEvents']!)
+      }
+      for (final row in data['personalRecordEvents']!) {
         PersonalRecordEventRow.fromJson(row);
+      }
     } on Object {
       throw const DataManagementException(
         'The backup contains an invalid field value.',
@@ -730,13 +744,14 @@ class DataManagementService {
   String _csvCell(Object? value) {
     if (value == null) return '';
     final text = value.toString();
-    return text.contains(RegExp('[,\"\r\n]'))
+    return text.contains(RegExp(r'[,"\r\n]'))
         ? '"${text.replaceAll('"', '""')}"'
         : text;
   }
 
   void _requiredId(String value, String label) {
-    if (value.trim().isEmpty)
+    if (value.trim().isEmpty) {
       throw DataManagementException('A valid $label is required.');
+    }
   }
 }
