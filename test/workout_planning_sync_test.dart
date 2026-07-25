@@ -350,7 +350,10 @@ void main() {
         connectivityChanges: const Stream.empty(),
       );
       addTearDown(coordinator.dispose);
-      final now = DateTime.utc(2026, 7, 24, 10);
+      // The malformed child mutation is deliberately older than the valid
+      // child mutation. This proves that processing continues with valid rows
+      // that occur later in the same ordered outbox batch.
+      final now = DateTime.utc(2026, 7, 20, 10);
       await database
           .into(database.plannerSyncQueue)
           .insert(
@@ -377,6 +380,7 @@ void main() {
       await coordinator.sync(_userA);
 
       expect(remote.templateExercises[entry.id]?.templateId, template.id);
+      expect(remote.templateExerciseUpsertCalls, 1);
       expect(await planningRepository.pendingCount(_userA), 1);
       expect(
         await planningRepository.pendingPreparationError(_userA),
