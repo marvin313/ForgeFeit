@@ -245,6 +245,7 @@ class _ExercisePickerScreenState extends ConsumerState<ExercisePickerScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
               child: TextField(
+                key: const ValueKey('exercise-picker-search'),
                 controller: _searchController,
                 autofocus: widget.selectionMode,
                 textInputAction: TextInputAction.search,
@@ -387,6 +388,7 @@ class _ExercisePickerScreenState extends ConsumerState<ExercisePickerScreen> {
                       );
                     }
                     return ListView.separated(
+                      key: const ValueKey('exercise-picker-list'),
                       padding: EdgeInsets.fromLTRB(
                         16,
                         2,
@@ -421,7 +423,9 @@ class _ExercisePickerScreenState extends ConsumerState<ExercisePickerScreen> {
                             ),
                           ),
                     icon: const Icon(Icons.add_task_rounded),
-                    label: Text('Add selected (${_selected.length})'),
+                    label: Text(
+                      'Add ${_selected.length} ${_selected.length == 1 ? 'Exercise' : 'Exercises'}',
+                    ),
                   ),
                 ),
               ),

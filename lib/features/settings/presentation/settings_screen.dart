@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:forgefit/app/branding.dart';
 import 'package:forgefit/core/settings/appearance_settings.dart';
 import 'package:forgefit/core/theme/forgefit_theme.dart';
 import 'package:forgefit/core/theme/forgefit_ui.dart';
@@ -108,10 +109,18 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: ForgeFitSpace.section),
           _SettingsSection(
             title: 'About',
-            child: const _SettingsRow(
-              icon: Icons.info_outline_rounded,
-              title: 'ForgeFit',
-              detail: 'Built. Tracked. Progressed.',
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+              child: Row(
+                children: [
+                  ForgeFitBrand(compact: true),
+                  Spacer(),
+                  Icon(
+                    Icons.info_outline_rounded,
+                    color: ForgeFitColors.textTertiary,
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 28),

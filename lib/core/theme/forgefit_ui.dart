@@ -4,13 +4,13 @@ import 'forgefit_theme.dart';
 
 abstract final class ForgeFitSpace {
   static const compact = 8.0;
-  static const standard = 16.0;
-  static const section = 24.0;
+  static const standard = 14.0;
+  static const section = 20.0;
 }
 
 abstract final class ForgeFitRadius {
-  static const card = 14.0;
-  static const control = 12.0;
+  static const card = 12.0;
+  static const control = 10.0;
 }
 
 class ForgeFitEmptyState extends StatelessWidget {
