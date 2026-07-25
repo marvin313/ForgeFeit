@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forgefit/core/database/app_database.dart';
 import 'package:forgefit/core/sync/sync_coordinator.dart';
 import 'package:forgefit/features/auth/data/auth_repository.dart';
+import 'package:forgefit/features/data_tools/data/data_management_service.dart';
 import 'package:forgefit/features/planning/data/offline_first_planning_repository.dart';
 import 'package:forgefit/features/planning/data/remote_planning_data_source.dart';
 import 'package:forgefit/features/planning/domain/planning_models.dart';
@@ -44,6 +45,12 @@ final appDatabaseProvider = Provider<AppDatabase>(
   },
   dependencies: const [],
   name: 'appDatabaseProvider',
+);
+
+final dataManagementServiceProvider = Provider<DataManagementService>(
+  (ref) => DataManagementService(database: ref.watch(appDatabaseProvider)),
+  dependencies: [appDatabaseProvider],
+  name: 'dataManagementServiceProvider',
 );
 
 final remoteWorkoutDataSourceProvider =

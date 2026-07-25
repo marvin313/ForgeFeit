@@ -8,6 +8,7 @@ import 'package:forgefit/app/providers.dart';
 import 'package:forgefit/features/auth/presentation/auth_controller.dart';
 import 'package:forgefit/features/auth/presentation/auth_validation.dart';
 import 'package:forgefit/features/dashboard/presentation/dashboard_screen.dart';
+import 'package:forgefit/features/data_tools/presentation/data_management_screen.dart';
 import 'package:forgefit/features/planning/presentation/start_workout_screen.dart';
 import 'package:forgefit/features/planning/presentation/template_editor_screen.dart';
 import 'package:forgefit/features/planning/presentation/template_library_screen.dart';
@@ -165,6 +166,12 @@ class _AuthenticatedShellState extends ConsumerState<AuthenticatedShell>
     ),
   );
 
+  Future<void> _openDataManagement() => Navigator.of(context).push<void>(
+    MaterialPageRoute(
+      builder: (_) => DataManagementScreen(userId: widget.user.id),
+    ),
+  );
+
   void _requestSessionSync() {
     unawaited(
       ref
@@ -300,6 +307,11 @@ class _AuthenticatedShellState extends ConsumerState<AuthenticatedShell>
       appBar: AppBar(
         title: const ForgeFitBrand(compact: true),
         actions: [
+          IconButton(
+            tooltip: 'Data Management',
+            onPressed: _openDataManagement,
+            icon: const Icon(Icons.folder_copy_outlined),
+          ),
           IconButton(
             tooltip: 'Retry sync',
             onPressed: _restoreAndSync,
