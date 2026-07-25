@@ -87,7 +87,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
   });
 
   Future<void> _restoreBackup() async {
-    final selection = await FilePicker.platform.pickFiles(
+    final selection = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: const ['json'],
       withData: true,
@@ -98,6 +98,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
     if (bytes == null && file.path != null) {
       bytes = await File(file.path!).readAsBytes();
     }
+    if (!mounted) return;
     if (bytes == null) {
       _message('ForgeFit could not read that backup file.', error: true);
       return;
