@@ -19,7 +19,7 @@ class DashboardScreen extends ConsumerWidget {
     required this.onShowTemplates,
     required this.onShowHistory,
     required this.onShowCalendar,
-    required this.onShowPersonalRecords,
+    required this.onShowProgress,
   });
 
   final String userId;
@@ -31,7 +31,7 @@ class DashboardScreen extends ConsumerWidget {
   final VoidCallback onShowTemplates;
   final VoidCallback onShowHistory;
   final VoidCallback onShowCalendar;
-  final VoidCallback onShowPersonalRecords;
+  final VoidCallback onShowProgress;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -115,9 +115,9 @@ class DashboardScreen extends ConsumerWidget {
                   children: [
                     Expanded(
                       child: _HomeShortcut(
-                        icon: Icons.emoji_events_outlined,
-                        label: 'Personal Records',
-                        onPressed: onShowPersonalRecords,
+                        icon: Icons.insights_outlined,
+                        label: 'Progress',
+                        onPressed: onShowProgress,
                       ),
                     ),
                     const SizedBox(width: 12),

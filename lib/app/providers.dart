@@ -147,6 +147,31 @@ final completedWorkoutSessionsProvider =
       name: 'completedWorkoutSessionsProvider',
     );
 
+/// Completed snapshots, including the exercises and sets used by Progress.
+/// The source session stream changes after a workout is completed or deleted,
+/// so derived progress data refreshes without maintaining a second cache.
+final completedWorkoutBundlesProvider =
+    StreamProvider.family<List<CompletedWorkoutBundle>, String>(
+      (ref, userId) async* {
+        final repository = ref.watch(sessionRepositoryProvider);
+        await for (final sessions in repository.watchCompletedSessions(
+          userId,
+        )) {
+          final bundles = await Future.wait(
+            sessions.map(
+              (session) => repository.getCompletedWorkout(
+                userId: userId,
+                sessionId: session.id,
+              ),
+            ),
+          );
+          yield List.unmodifiable(bundles);
+        }
+      },
+      dependencies: [sessionRepositoryProvider],
+      name: 'completedWorkoutBundlesProvider',
+    );
+
 final personalRecordsProvider =
     StreamProvider.family<List<PersonalRecord>, String>(
       (ref, userId) =>
