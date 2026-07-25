@@ -1273,9 +1273,9 @@ class OfflineFirstPlanningRepository {
             .get();
     final sortedRows = [...queueRows]
       ..sort((a, b) {
-        final typeComparison = planningEntityTypeFromWire(a.entityType)
-            .uploadPriority
-            .compareTo(planningEntityTypeFromWire(b.entityType).uploadPriority);
+        final typeComparison = _uploadPriorityForWire(
+          a.entityType,
+        ).compareTo(_uploadPriorityForWire(b.entityType));
         return typeComparison != 0
             ? typeComparison
             : a.createdAt.compareTo(b.createdAt);
@@ -1476,6 +1476,17 @@ class OfflineFirstPlanningRepository {
             updatedAt: Value(now),
           ),
         );
+  }
+
+  int _uploadPriorityForWire(String entityType) {
+    try {
+      return planningEntityTypeFromWire(entityType).uploadPriority;
+    } on FormatException {
+      // Keep unknown legacy/corrupt rows at the end of the batch. They are
+      // recorded below when materialization fails, without blocking valid
+      // parent and template-exercise mutations.
+      return 999;
+    }
   }
 
   Future<void> restore(String userId) async {

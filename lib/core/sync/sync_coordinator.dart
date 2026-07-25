@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
 
 import '../../features/planning/data/offline_first_planning_repository.dart';
+import '../../features/planning/domain/planning_models.dart';
 import '../../features/sessions/data/offline_first_session_repository.dart';
 import '../../features/workouts/data/offline_first_workout_repository.dart';
 
@@ -266,7 +267,7 @@ class SyncCoordinator {
               upload.entityVersion,
             );
           } catch (error) {
-            final message = readableSyncError(error);
+            final message = _planningUploadFailureMessage(upload, error);
             await planningRepository.recordUploadFailure(
               upload.queueId,
               upload.entityVersion,
@@ -280,7 +281,11 @@ class SyncCoordinator {
               deferredFailure = message;
               deferredFailureIsNetwork = _isLikelyNetworkError(error);
             }
-            break;
+            // Each planning mutation is independent and has its own stable
+            // UUID/version. Keep the failed row durable for retry, but allow
+            // later valid rows (especially template exercises) to upload in
+            // this same pass.
+            continue;
           }
 
           pending = await _pendingCount(userId);
@@ -421,6 +426,19 @@ class SyncCoordinator {
     unawaited(_connectivitySubscription.cancel());
     unawaited(_statusController.close());
   }
+}
+
+String _planningUploadFailureMessage(
+  PendingPlanningUpload upload,
+  Object error,
+) {
+  final entity = switch (upload.entityType) {
+    PlanningEntityType.workoutSplit => 'Workout split',
+    PlanningEntityType.workoutTemplate => 'Workout template',
+    PlanningEntityType.customExercise => 'Custom exercise',
+    PlanningEntityType.templateExercise => 'Template exercise',
+  };
+  return '$entity upload failed. ${readableSyncError(error)}';
 }
 
 /// Produces a safe status message without exposing request URLs, credentials,
