@@ -76,26 +76,10 @@ class SupabaseRemotePlanningDataSource implements RemotePlanningDataSource {
 
   @override
   Future<CustomExercise> upsertCustomExercise(CustomExercise exercise) async {
-    final rows = await _client.from('custom_exercises').upsert({
-      'id': exercise.id,
-      'user_id': exercise.userId,
-      'name': exercise.name,
-      'primary_muscle_group': exercise.primaryMuscleGroup.wireValue,
-      'secondary_muscle_groups': [
-        for (final group in exercise.secondaryMuscleGroups) group.wireValue,
-      ],
-      'equipment': exercise.equipment.wireValue,
-      'aliases': exercise.aliases,
-      'search_keywords': exercise.keywords,
-      'instructions': exercise.instructions,
-      'personal_notes': exercise.personalNotes,
-      'is_favourite': exercise.isFavourite,
-      'last_used_at': _optionalTimestamp(exercise.lastUsedAt),
-      'created_at': _timestamp(exercise.createdAt),
-      'updated_at': _timestamp(exercise.updatedAt),
-      'deleted_at': _optionalTimestamp(exercise.deletedAt),
-      'version': exercise.version,
-    }, onConflict: 'id').select();
+    final rows = await _client
+        .from('custom_exercises')
+        .upsert(customExerciseUpsertPayload(exercise), onConflict: 'id')
+        .select();
     if (rows.isNotEmpty) return _customExerciseFromMap(rows.single);
     return _fetchWinner(
       table: 'custom_exercises',
@@ -109,31 +93,10 @@ class SupabaseRemotePlanningDataSource implements RemotePlanningDataSource {
   Future<TemplateExercise> upsertTemplateExercise(
     TemplateExercise exercise,
   ) async {
-    final rows = await _client.from('template_exercises').upsert({
-      'id': exercise.id,
-      'user_id': exercise.userId,
-      'template_id': exercise.templateId,
-      'custom_exercise_id': exercise.customExerciseId,
-      'system_exercise_key': exercise.systemExerciseKey,
-      'exercise_source': exercise.source.name,
-      'exercise_name': exercise.exerciseName,
-      'primary_muscle_group': exercise.primaryMuscleGroup.wireValue,
-      'equipment': exercise.equipment.wireValue,
-      'working_sets': exercise.workingSets,
-      'warm_up_sets': exercise.warmupSets,
-      'min_target_reps': exercise.targetRepsMin,
-      'max_target_reps': exercise.targetRepsMax,
-      'target_weight': exercise.targetWeight,
-      'rest_seconds': exercise.restSeconds,
-      'rpe_target': exercise.rpeTarget,
-      'rir_target': exercise.rirTarget,
-      'notes': exercise.notes,
-      'sort_order': exercise.sortOrder,
-      'created_at': _timestamp(exercise.createdAt),
-      'updated_at': _timestamp(exercise.updatedAt),
-      'deleted_at': _optionalTimestamp(exercise.deletedAt),
-      'version': exercise.version,
-    }, onConflict: 'id').select();
+    final rows = await _client
+        .from('template_exercises')
+        .upsert(templateExerciseUpsertPayload(exercise), onConflict: 'id')
+        .select();
     if (rows.isNotEmpty) return _templateExerciseFromMap(rows.single);
     return _fetchWinner(
       table: 'template_exercises',
@@ -205,6 +168,60 @@ class SupabaseRemotePlanningDataSource implements RemotePlanningDataSource {
     return decode(row);
   }
 }
+
+/// The exact owner-scoped payload sent to the Stage 2/4 Supabase table.
+/// Keeping it separate makes the app-to-schema contract testable for every
+/// built-in catalogue record and for legacy local records queued for retry.
+Map<String, dynamic> customExerciseUpsertPayload(CustomExercise exercise) => {
+  'id': exercise.id,
+  'user_id': exercise.userId,
+  'name': exercise.name,
+  'primary_muscle_group': exercise.primaryMuscleGroup.wireValue,
+  'secondary_muscle_groups': [
+    for (final group in exercise.secondaryMuscleGroups) group.wireValue,
+  ],
+  'equipment': exercise.equipment.wireValue,
+  'aliases': exercise.aliases,
+  'search_keywords': exercise.keywords,
+  'instructions': exercise.instructions,
+  'personal_notes': exercise.personalNotes,
+  'is_favourite': exercise.isFavourite,
+  'last_used_at': _optionalTimestamp(exercise.lastUsedAt),
+  'created_at': _timestamp(exercise.createdAt),
+  'updated_at': _timestamp(exercise.updatedAt),
+  'deleted_at': _optionalTimestamp(exercise.deletedAt),
+  'version': exercise.version,
+};
+
+/// The exact owner-scoped payload sent for a template exercise upsert or
+/// tombstone. IDs remain stable across retries, so PostgREST upsert is
+/// idempotent.
+Map<String, dynamic> templateExerciseUpsertPayload(TemplateExercise exercise) =>
+    {
+      'id': exercise.id,
+      'user_id': exercise.userId,
+      'template_id': exercise.templateId,
+      'custom_exercise_id': exercise.customExerciseId,
+      'system_exercise_key': exercise.systemExerciseKey,
+      'exercise_source': exercise.source.name,
+      'exercise_name': exercise.exerciseName,
+      'primary_muscle_group': exercise.primaryMuscleGroup.wireValue,
+      'equipment': exercise.equipment.wireValue,
+      'working_sets': exercise.workingSets,
+      'warm_up_sets': exercise.warmupSets,
+      'min_target_reps': exercise.targetRepsMin,
+      'max_target_reps': exercise.targetRepsMax,
+      'target_weight': exercise.targetWeight,
+      'rest_seconds': exercise.restSeconds,
+      'rpe_target': exercise.rpeTarget,
+      'rir_target': exercise.rirTarget,
+      'notes': exercise.notes,
+      'sort_order': exercise.sortOrder,
+      'created_at': _timestamp(exercise.createdAt),
+      'updated_at': _timestamp(exercise.updatedAt),
+      'deleted_at': _optionalTimestamp(exercise.deletedAt),
+      'version': exercise.version,
+    };
 
 WorkoutSplit _splitFromMap(Map<String, dynamic> row) {
   return WorkoutSplit(

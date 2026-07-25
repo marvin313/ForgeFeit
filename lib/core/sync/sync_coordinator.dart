@@ -438,7 +438,46 @@ String _planningUploadFailureMessage(
     PlanningEntityType.customExercise => 'Custom exercise',
     PlanningEntityType.templateExercise => 'Template exercise',
   };
-  return '$entity upload failed. ${readableSyncError(error)}';
+  final operation = upload.entityType == PlanningEntityType.templateExercise
+      ? 'upsert'
+      : 'upload';
+  final identifier = _planningUploadIdentifier(upload);
+  final rejectedField = _planningRejectedField(error);
+  final fieldDetail = rejectedField == null
+      ? ''
+      : ' Rejected field: $rejectedField.';
+  return '$entity $operation failed$identifier.$fieldDetail ${readableSyncError(error)}';
+}
+
+String _planningUploadIdentifier(PendingPlanningUpload upload) {
+  if (upload.entity is TemplateExercise) {
+    final exercise = upload.entity as TemplateExercise;
+    if (exercise.systemExerciseKey case final systemKey?) {
+      return ' for $systemKey';
+    }
+    return ' for custom exercise ${_shortIdentifier(exercise.customExerciseId ?? exercise.id)}';
+  }
+  return '';
+}
+
+String _shortIdentifier(String value) =>
+    value.length <= 8 ? value : value.substring(0, 8);
+
+String? _planningRejectedField(Object error) {
+  final message = error.toString().toLowerCase();
+  if (message.contains('primary_muscle_group_check')) {
+    return 'primary muscle group';
+  }
+  if (message.contains('equipment_check')) {
+    return 'equipment';
+  }
+  if (message.contains('exercise_source')) {
+    return 'exercise source';
+  }
+  if (message.contains('exactly_one_source')) {
+    return 'exercise identity';
+  }
+  return null;
 }
 
 /// Produces a safe status message without exposing request URLs, credentials,
