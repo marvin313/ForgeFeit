@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('every configured iOS AppIcon slot uses a valid opaque PNG', () async {
-    final source = File('assets/branding/IMG_7960.jpg');
+    final source = File('assets/branding/Generated image 1.png');
     final contents = File(
       'ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json',
     );
