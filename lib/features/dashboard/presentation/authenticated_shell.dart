@@ -12,7 +12,7 @@ import 'package:forgefit/features/planning/presentation/start_workout_screen.dar
 import 'package:forgefit/features/planning/presentation/template_editor_screen.dart';
 import 'package:forgefit/features/planning/presentation/template_library_screen.dart';
 import 'package:forgefit/features/sessions/presentation/active_workout_screen.dart';
-import 'package:forgefit/features/sessions/presentation/personal_records_screen.dart';
+import 'package:forgefit/features/progress/presentation/progress_screen.dart';
 import 'package:forgefit/features/sessions/presentation/session_history_screen.dart';
 import 'package:forgefit/features/workouts/presentation/workout_form_screen.dart';
 import 'package:forgefit/features/workouts/presentation/workout_history_screen.dart';
@@ -145,14 +145,10 @@ class _AuthenticatedShellState extends ConsumerState<AuthenticatedShell>
     );
   }
 
-  Future<void> _openPersonalRecords() => Navigator.of(context).push<void>(
+  Future<void> _openProgress() => Navigator.of(context).push<void>(
     MaterialPageRoute(
-      builder: (_) => PersonalRecordsScreen(
-        userId: widget.user.id,
-        weightUnit: _weightUnit,
-        repository: ref.read(sessionRepositoryProvider),
-        onSyncRequested: _requestSessionSync,
-      ),
+      builder: (_) =>
+          ProgressScreen(userId: widget.user.id, weightUnit: _weightUnit),
     ),
   );
 
@@ -266,7 +262,7 @@ class _AuthenticatedShellState extends ConsumerState<AuthenticatedShell>
           _selectedIndex = 2;
           _showHistoryCalendar = true;
         }),
-        onShowPersonalRecords: _openPersonalRecords,
+        onShowProgress: _openProgress,
       ),
       TemplateLibraryScreen(userId: widget.user.id),
       SessionHistoryScreen(
