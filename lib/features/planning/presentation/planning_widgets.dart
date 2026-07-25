@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forgefit/app/providers.dart';
+import 'package:forgefit/core/settings/appearance_settings.dart';
 import 'package:forgefit/core/theme/forgefit_theme.dart';
 import 'package:forgefit/features/planning/domain/planning_models.dart';
 
@@ -294,7 +295,14 @@ class PlanningTemplateCard extends ConsumerWidget {
       key: key ?? ValueKey('template-card-${template.id}'),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: enabled ? onTap : null,
+        onTap: enabled && onTap != null
+            ? () {
+                ForgeFitHaptics.selection(
+                  ref.read(appearanceProvider).hapticsEnabled,
+                );
+                onTap!();
+              }
+            : null,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 15, 8, 15),
           child: Row(
@@ -580,7 +588,11 @@ class PlanningStateMessage extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 58, color: ForgeFitColors.electricBlue),
+              Icon(
+                icon,
+                size: 58,
+                color: Theme.of(context).colorScheme.primary,
+              ),
               const SizedBox(height: 18),
               Text(
                 title,

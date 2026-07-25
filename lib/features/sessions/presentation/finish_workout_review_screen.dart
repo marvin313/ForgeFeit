@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/settings/appearance_settings.dart';
 import '../../../core/theme/forgefit_theme.dart';
 import '../data/offline_first_session_repository.dart';
 import '../domain/workout_session_models.dart';
@@ -16,6 +17,7 @@ class FinishWorkoutReviewScreen extends StatefulWidget {
     this.onWorkoutFinished,
     this.onWorkoutDiscarded,
     this.onLocalChangeQueued,
+    this.hapticsEnabled = true,
   });
 
   final String userId;
@@ -25,6 +27,7 @@ class FinishWorkoutReviewScreen extends StatefulWidget {
   final ValueChanged<CompletedWorkoutBundle>? onWorkoutFinished;
   final VoidCallback? onWorkoutDiscarded;
   final VoidCallback? onLocalChangeQueued;
+  final bool hapticsEnabled;
 
   @override
   State<FinishWorkoutReviewScreen> createState() =>
@@ -48,6 +51,7 @@ class _FinishWorkoutReviewScreenState extends State<FinishWorkoutReviewScreen> {
       );
       widget.onLocalChangeQueued?.call();
       if (!mounted) return;
+      ForgeFitHaptics.success(widget.hapticsEnabled);
       widget.onWorkoutFinished?.call(completed);
       await Navigator.of(context).pushReplacement<void, void>(
         MaterialPageRoute(

@@ -437,13 +437,13 @@ class _TemplateEditorScreenState extends ConsumerState<TemplateEditorScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    const Row(
+                    Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
                           Icons.offline_bolt_outlined,
                           size: 17,
-                          color: ForgeFitColors.electricBlue,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                         SizedBox(width: 7),
                         Flexible(
@@ -903,9 +903,9 @@ class _BeforeCreateCard extends StatelessWidget {
         padding: const EdgeInsets.all(22),
         child: Column(
           children: [
-            const Icon(
+            Icon(
               Icons.playlist_add_check_circle_outlined,
-              color: ForgeFitColors.electricBlue,
+              color: Theme.of(context).colorScheme.primary,
               size: 48,
             ),
             const SizedBox(height: 12),

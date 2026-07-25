@@ -5,6 +5,7 @@ import 'package:forgefit/app/bootstrap.dart';
 import 'package:forgefit/app/branding.dart';
 import 'package:forgefit/app/providers.dart';
 import 'package:forgefit/app/startup_diagnostics.dart';
+import 'package:forgefit/core/settings/appearance_settings.dart';
 import 'package:forgefit/core/theme/forgefit_theme.dart';
 
 class ForgeFitApp extends ConsumerWidget {
@@ -13,14 +14,16 @@ class ForgeFitApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final bootstrap = ref.watch(bootstrapProvider);
+    final appearance = ref.watch(appearanceProvider);
     return bootstrap.when(
-      loading: () => _materialApp(const _SplashScreen()),
+      loading: () => _materialApp(const _SplashScreen(), appearance),
       error: (_, _) => _materialApp(
         _ConfigurationScreen(
           message:
               'ForgeFit could not read its release build configuration. Reinstall a build made with valid Supabase values.',
           onRetry: () => ref.invalidate(bootstrapProvider),
         ),
+        appearance,
       ),
       data: (result) {
         if (!result.isReady) {
@@ -31,6 +34,7 @@ class ForgeFitApp extends ConsumerWidget {
                   'ForgeFit needs valid Supabase configuration values.',
               onRetry: () => ref.invalidate(bootstrapProvider),
             ),
+            appearance,
           );
         }
         // The override must sit above MaterialApp so every Navigator route,
@@ -38,18 +42,18 @@ class ForgeFitApp extends ConsumerWidget {
         return ProviderScope(
           overrides: [supabaseClientProvider.overrideWithValue(result.client!)],
           observers: [startupProviderObserver],
-          child: _materialApp(const AuthGate()),
+          child: _materialApp(const AuthGate(), appearance),
         );
       },
     );
   }
 }
 
-MaterialApp _materialApp(Widget home) {
+MaterialApp _materialApp(Widget home, ForgeFitAppearance appearance) {
   return MaterialApp(
     title: 'ForgeFit',
     debugShowCheckedModeBanner: false,
-    theme: buildForgeFitTheme(),
+    theme: buildForgeFitTheme(accent: appearance.accent),
     home: home,
   );
 }

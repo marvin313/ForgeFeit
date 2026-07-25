@@ -241,22 +241,13 @@ class _StartWorkoutHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF006DAD), Color(0xFF00A8FF)],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: ForgeFitColors.electricBlue.withValues(alpha: 0.2),
-            blurRadius: 30,
-            offset: const Offset(0, 12),
-          ),
-        ],
+        color: colors.primaryContainer,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.primary.withValues(alpha: 0.32)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -271,7 +262,7 @@ class _StartWorkoutHero extends StatelessWidget {
                     Text(
                       'READY TO TRAIN?',
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: const Color(0xFFD9F3FF),
+                        color: colors.primary,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 1.1,
                       ),
@@ -281,22 +272,25 @@ class _StartWorkoutHero extends StatelessWidget {
                       'Start your workout',
                       style: Theme.of(context).textTheme.headlineSmall
                           ?.copyWith(
-                            color: Colors.white,
+                            color: colors.onPrimaryContainer,
                             fontWeight: FontWeight.w900,
                           ),
                     ),
                     const SizedBox(height: 6),
-                    const Text(
+                    Text(
                       'Choose any template or train without one.',
-                      style: TextStyle(color: Color(0xFFD9F3FF), height: 1.35),
+                      style: TextStyle(
+                        color: ForgeFitColors.textSecondary,
+                        height: 1.35,
+                      ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(width: 12),
-              const Icon(
+              Icon(
                 Icons.fitness_center_rounded,
-                color: Color(0xFFD9F3FF),
+                color: colors.primary,
                 size: 54,
               ),
             ],
@@ -305,8 +299,6 @@ class _StartWorkoutHero extends StatelessWidget {
           FilledButton.icon(
             onPressed: onStartWorkout,
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF07131A),
-              foregroundColor: Colors.white,
               minimumSize: const Size.fromHeight(48),
             ),
             icon: const Icon(Icons.play_arrow_rounded),
@@ -314,10 +306,7 @@ class _StartWorkoutHero extends StatelessWidget {
           ),
           TextButton.icon(
             onPressed: onQuickLog,
-            style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFFEAF8FF),
-              minimumSize: const Size.fromHeight(44),
-            ),
+            style: TextButton.styleFrom(minimumSize: const Size.fromHeight(44)),
             icon: const Icon(Icons.flash_on_outlined, size: 19),
             label: const Text('Quick log one set'),
           ),
@@ -334,6 +323,7 @@ class _TemplatesShortcut extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = Theme.of(context).colorScheme.primary;
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -346,13 +336,10 @@ class _TemplatesShortcut extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: ForgeFitColors.electricBlue.withValues(alpha: 0.12),
+                  color: accent.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(15),
                 ),
-                child: const Icon(
-                  Icons.view_list_rounded,
-                  color: ForgeFitColors.electricBlue,
-                ),
+                child: Icon(Icons.view_list_rounded, color: accent),
               ),
               const SizedBox(width: 15),
               Expanded(
@@ -391,9 +378,10 @@ class _ContinueWorkoutCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = Theme.of(context).colorScheme.primary;
     final completedSets = active.sets.where((set) => set.isCompleted).length;
     return Card(
-      color: ForgeFitColors.electricBlue.withValues(alpha: 0.13),
+      color: accent.withValues(alpha: 0.13),
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
         onTap: onPressed,
@@ -401,20 +389,16 @@ class _ContinueWorkoutCard extends StatelessWidget {
           padding: const EdgeInsets.all(18),
           child: Row(
             children: [
-              const Icon(
-                Icons.play_circle_fill_rounded,
-                color: ForgeFitColors.electricBlue,
-                size: 42,
-              ),
+              Icon(Icons.play_circle_fill_rounded, color: accent, size: 42),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'CONTINUE WORKOUT',
                       style: TextStyle(
-                        color: ForgeFitColors.electricBlue,
+                        color: accent,
                         fontSize: 11,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 0.8,
@@ -468,7 +452,7 @@ class _HomeShortcut extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
           child: Column(
             children: [
-              Icon(icon, color: ForgeFitColors.electricBlue),
+              Icon(icon, color: Theme.of(context).colorScheme.primary),
               const SizedBox(height: 9),
               Text(
                 label,
@@ -500,9 +484,9 @@ class _RecentSessionCard extends StatelessWidget {
         padding: const EdgeInsets.all(17),
         child: Row(
           children: [
-            const Icon(
+            Icon(
               Icons.check_circle_rounded,
-              color: ForgeFitColors.electricBlue,
+              color: Theme.of(context).colorScheme.primary,
             ),
             const SizedBox(width: 13),
             Expanded(

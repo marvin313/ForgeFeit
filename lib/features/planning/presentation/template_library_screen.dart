@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forgefit/app/providers.dart';
+import 'package:forgefit/core/settings/appearance_settings.dart';
 import 'package:forgefit/features/planning/domain/planning_models.dart';
 import 'package:forgefit/features/planning/presentation/custom_exercise_editor_screen.dart';
 import 'package:forgefit/features/planning/presentation/exercise_picker_screen.dart';
@@ -299,7 +300,12 @@ class _TemplateLibraryScreenState extends ConsumerState<TemplateLibraryScreen> {
                 PlanningTemplateScopeBar(
                   splits: headerSplits,
                   selected: selectedScope,
-                  onChanged: (scope) => setState(() => _scope = scope),
+                  onChanged: (scope) {
+                    ForgeFitHaptics.selection(
+                      ref.read(appearanceProvider).hapticsEnabled,
+                    );
+                    setState(() => _scope = scope);
+                  },
                 ),
                 const SizedBox(height: 10),
                 Align(

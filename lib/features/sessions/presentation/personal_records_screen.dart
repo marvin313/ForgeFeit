@@ -249,8 +249,8 @@ class _RecordGroupCard extends StatelessWidget {
                       const SizedBox(width: 10),
                       Text(
                         _recordValue(record, weightUnit),
-                        style: const TextStyle(
-                          color: ForgeFitColors.electricBlue,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
                           fontSize: 16,
                           fontWeight: FontWeight.w900,
                         ),

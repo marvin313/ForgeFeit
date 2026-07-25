@@ -114,19 +114,16 @@ class _SummaryContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final session = summary.session;
+    final colors = Theme.of(context).colorScheme;
     return ListView(
       padding: const EdgeInsets.fromLTRB(18, 10, 18, 30),
       children: [
         Container(
           padding: const EdgeInsets.all(22),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF073B55), Color(0xFF122333)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: const Color(0xFF12658D)),
+            color: colors.primaryContainer,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: colors.primary.withValues(alpha: 0.32)),
           ),
           child: Column(
             children: [
@@ -146,7 +143,7 @@ class _SummaryContent extends StatelessWidget {
               const SizedBox(height: 6),
               Text(
                 SessionFormat.dateTime(session.endedAt),
-                style: const TextStyle(color: Color(0xFFB3C6D1)),
+                style: const TextStyle(color: ForgeFitColors.textSecondary),
               ),
             ],
           ),

@@ -139,7 +139,11 @@ class SessionEmptyState extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 62, color: ForgeFitColors.electricBlue),
+              Icon(
+                icon,
+                size: 62,
+                color: Theme.of(context).colorScheme.primary,
+              ),
               const SizedBox(height: 18),
               Text(
                 title,
@@ -182,16 +186,17 @@ class SessionMetricTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = Theme.of(context).colorScheme.primary;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: highlight
-            ? ForgeFitColors.electricBlue.withValues(alpha: 0.12)
+            ? accent.withValues(alpha: 0.12)
             : ForgeFitColors.surfaceHigh,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: highlight
-              ? ForgeFitColors.electricBlue.withValues(alpha: 0.34)
+              ? accent.withValues(alpha: 0.34)
               : const Color(0xFF29313A),
         ),
       ),
@@ -202,9 +207,7 @@ class SessionMetricTile extends StatelessWidget {
             Icon(
               icon,
               size: 19,
-              color: highlight
-                  ? ForgeFitColors.electricBlue
-                  : const Color(0xFFA8B1BC),
+              color: highlight ? accent : const Color(0xFFA8B1BC),
             ),
             const SizedBox(height: 8),
           ],

@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forgefit/app/providers.dart';
+import 'package:forgefit/core/settings/appearance_settings.dart';
 import 'package:forgefit/core/theme/forgefit_theme.dart';
 import 'package:forgefit/features/planning/domain/planning_models.dart';
 import 'package:forgefit/features/progress/domain/progress_calculations.dart';
@@ -72,8 +73,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                   onRangeChanged: _setRange,
                   options: options,
                   selectedKey: selected,
-                  onExerciseChanged: (value) =>
-                      setState(() => _exerciseKey = value),
+                  onExerciseChanged: _setExercise,
                   bundles: filtered,
                   records: records,
                   weightUnit: widget.weightUnit,
@@ -95,7 +95,15 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
     );
   }
 
-  void _setRange(ProgressTimeRange value) => setState(() => _range = value);
+  void _setRange(ProgressTimeRange value) {
+    ForgeFitHaptics.selection(ref.read(appearanceProvider).hapticsEnabled);
+    setState(() => _range = value);
+  }
+
+  void _setExercise(String? value) {
+    ForgeFitHaptics.selection(ref.read(appearanceProvider).hapticsEnabled);
+    setState(() => _exerciseKey = value);
+  }
 }
 
 Map<String, String> _splitNames(
@@ -408,6 +416,7 @@ class _ProgressLineChart extends StatelessWidget {
       return const _ChartEmpty('No valid weighted sets in this range.');
     }
     final maxValue = points.map((point) => point.value).reduce(_max);
+    final accent = Theme.of(context).colorScheme.primary;
     return SizedBox(
       height: 230,
       child: LineChart(
@@ -433,12 +442,20 @@ class _ProgressLineChart extends StatelessWidget {
           lineBarsData: [
             LineChartBarData(
               isCurved: points.length > 2,
-              color: ForgeFitColors.electricBlue,
+              color: accent,
               barWidth: 3,
-              dotData: const FlDotData(show: true),
+              dotData: FlDotData(
+                show: true,
+                getDotPainter: (_, _, _, _) => FlDotCirclePainter(
+                  radius: 4,
+                  color: accent,
+                  strokeColor: ForgeFitColors.background,
+                  strokeWidth: 2,
+                ),
+              ),
               belowBarData: BarAreaData(
                 show: true,
-                color: ForgeFitColors.electricBlue.withValues(alpha: 0.12),
+                color: accent.withValues(alpha: 0.12),
               ),
               spots: [
                 for (var index = 0; index < points.length; index++)
@@ -464,6 +481,7 @@ class _ProgressBarChart extends StatelessWidget {
       return const _ChartEmpty('No weighted volume in this range.');
     }
     final maxValue = points.map((point) => point.value).reduce(_max);
+    final accent = Theme.of(context).colorScheme.primary;
     return SizedBox(
       height: 230,
       child: BarChart(
@@ -488,7 +506,7 @@ class _ProgressBarChart extends StatelessWidget {
                 barRods: [
                   BarChartRodData(
                     toY: points[index].value,
-                    color: ForgeFitColors.electricBlue,
+                    color: accent,
                     width: 14,
                     borderRadius: BorderRadius.circular(4),
                   ),
