@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:forgefit/core/theme/forgefit_theme.dart';
 
 class ForgeFitBrand extends StatelessWidget {
   const ForgeFitBrand({super.key, this.compact = false});
@@ -9,6 +8,7 @@ class ForgeFitBrand extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final markSize = compact ? 40.0 : 64.0;
+    final accent = Theme.of(context).colorScheme.primary;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -16,19 +16,12 @@ class ForgeFitBrand extends StatelessWidget {
           width: markSize,
           height: markSize,
           decoration: BoxDecoration(
-            color: ForgeFitColors.electricBlue,
+            color: accent,
             borderRadius: BorderRadius.circular(compact ? 13 : 20),
-            boxShadow: [
-              BoxShadow(
-                color: ForgeFitColors.electricBlue.withValues(alpha: 0.25),
-                blurRadius: 28,
-                spreadRadius: 2,
-              ),
-            ],
           ),
           child: Icon(
             Icons.fitness_center_rounded,
-            color: const Color(0xFF001D2D),
+            color: Theme.of(context).colorScheme.onPrimary,
             size: compact ? 24 : 36,
           ),
         ),

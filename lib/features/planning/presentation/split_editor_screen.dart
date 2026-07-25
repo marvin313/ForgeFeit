@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forgefit/app/providers.dart';
-import 'package:forgefit/core/theme/forgefit_theme.dart';
 import 'package:forgefit/features/planning/domain/planning_models.dart';
 
 class SplitEditorScreen extends ConsumerStatefulWidget {
@@ -292,12 +291,12 @@ class _SplitEditorScreenState extends ConsumerState<SplitEditorScreen> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      const Row(
+                      Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
                             Icons.offline_bolt_outlined,
-                            color: ForgeFitColors.electricBlue,
+                            color: Theme.of(context).colorScheme.primary,
                             size: 17,
                           ),
                           SizedBox(width: 7),

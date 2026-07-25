@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forgefit/app/app_flow.dart';
 import 'package:forgefit/app/branding.dart';
 import 'package:forgefit/app/providers.dart';
+import 'package:forgefit/core/settings/appearance_settings.dart';
 import 'package:forgefit/features/auth/presentation/auth_controller.dart';
 import 'package:forgefit/features/auth/presentation/auth_validation.dart';
 import 'package:forgefit/features/dashboard/presentation/dashboard_screen.dart';
@@ -12,6 +13,7 @@ import 'package:forgefit/features/data_tools/presentation/data_management_screen
 import 'package:forgefit/features/planning/presentation/start_workout_screen.dart';
 import 'package:forgefit/features/planning/presentation/template_editor_screen.dart';
 import 'package:forgefit/features/planning/presentation/template_library_screen.dart';
+import 'package:forgefit/features/settings/presentation/settings_screen.dart';
 import 'package:forgefit/features/sessions/presentation/active_workout_screen.dart';
 import 'package:forgefit/features/progress/presentation/progress_screen.dart';
 import 'package:forgefit/features/sessions/presentation/session_history_screen.dart';
@@ -141,6 +143,7 @@ class _AuthenticatedShellState extends ConsumerState<AuthenticatedShell>
           weightUnit: _weightUnit,
           repository: ref.read(sessionRepositoryProvider),
           onLocalChangeQueued: _requestSessionSync,
+          hapticsEnabled: ref.read(appearanceProvider).hapticsEnabled,
         ),
       ),
     );
@@ -169,6 +172,17 @@ class _AuthenticatedShellState extends ConsumerState<AuthenticatedShell>
   Future<void> _openDataManagement() => Navigator.of(context).push<void>(
     MaterialPageRoute(
       builder: (_) => DataManagementScreen(userId: widget.user.id),
+    ),
+  );
+
+  Future<void> _openSettings() => Navigator.of(context).push<void>(
+    MaterialPageRoute(
+      builder: (_) => SettingsScreen(
+        userId: widget.user.id,
+        email: widget.user.email,
+        weightUnit: _weightUnit,
+        onLogout: _logout,
+      ),
     ),
   );
 
@@ -252,6 +266,7 @@ class _AuthenticatedShellState extends ConsumerState<AuthenticatedShell>
 
   @override
   Widget build(BuildContext context) {
+    final appearance = ref.watch(appearanceProvider);
     final legacyWorkouts =
         ref.watch(workoutHistoryProvider(widget.user.id)).asData?.value ??
         const [];
@@ -308,6 +323,11 @@ class _AuthenticatedShellState extends ConsumerState<AuthenticatedShell>
         title: const ForgeFitBrand(compact: true),
         actions: [
           IconButton(
+            tooltip: 'Settings',
+            onPressed: _openSettings,
+            icon: const Icon(Icons.settings_outlined),
+          ),
+          IconButton(
             tooltip: 'Data Management',
             onPressed: _openDataManagement,
             icon: const Icon(Icons.folder_copy_outlined),
@@ -336,6 +356,7 @@ class _AuthenticatedShellState extends ConsumerState<AuthenticatedShell>
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) {
+          ForgeFitHaptics.selection(appearance.hapticsEnabled);
           setState(() {
             _selectedIndex = index;
             if (index == 2) _showHistoryCalendar = false;

@@ -4,6 +4,7 @@ import 'dart:collection';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forgefit/app/providers.dart';
+import 'package:forgefit/core/settings/appearance_settings.dart';
 import 'package:forgefit/core/theme/forgefit_theme.dart';
 import 'package:forgefit/features/planning/domain/planning_models.dart';
 import 'package:forgefit/features/planning/domain/system_exercise_catalog.dart';
@@ -69,6 +70,17 @@ class _ExercisePickerScreenState extends ConsumerState<ExercisePickerScreen> {
 
   void _reloadRecent() {
     setState(() => _snapshotFuture = _loadSnapshot());
+  }
+
+  void _toggleSelection(String key, ExerciseSelection selection) {
+    ForgeFitHaptics.selection(ref.read(appearanceProvider).hapticsEnabled);
+    setState(() {
+      if (_selected.containsKey(key)) {
+        _selected.remove(key);
+      } else {
+        _selected[key] = selection;
+      }
+    });
   }
 
   Future<void> _createCustomExercise() async {
@@ -262,7 +274,12 @@ class _ExercisePickerScreenState extends ConsumerState<ExercisePickerScreen> {
                           selected: _mode == mode,
                           label: Text(_modeLabel(mode)),
                           avatar: Icon(_modeIcon(mode), size: 18),
-                          onSelected: (_) => setState(() => _mode = mode),
+                          onSelected: (_) {
+                            ForgeFitHaptics.selection(
+                              ref.read(appearanceProvider).hapticsEnabled,
+                            );
+                            setState(() => _mode = mode);
+                          },
                         ),
                       );
                     })
@@ -294,7 +311,12 @@ class _ExercisePickerScreenState extends ConsumerState<ExercisePickerScreen> {
                         ),
                       ),
                     ],
-                    onChanged: (value) => setState(() => _muscle = value),
+                    onChanged: (value) {
+                      ForgeFitHaptics.selection(
+                        ref.read(appearanceProvider).hapticsEnabled,
+                      );
+                      setState(() => _muscle = value);
+                    },
                   ),
                   const SizedBox(height: 10),
                   DropdownButtonFormField<ExerciseEquipment?>(
@@ -318,7 +340,12 @@ class _ExercisePickerScreenState extends ConsumerState<ExercisePickerScreen> {
                         ),
                       ),
                     ],
-                    onChanged: (value) => setState(() => _equipment = value),
+                    onChanged: (value) {
+                      ForgeFitHaptics.selection(
+                        ref.read(appearanceProvider).hapticsEnabled,
+                      );
+                      setState(() => _equipment = value);
+                    },
                   ),
                 ],
               ),
@@ -410,18 +437,13 @@ class _ExercisePickerScreenState extends ConsumerState<ExercisePickerScreen> {
     final selectionKey = _selectionKey(selection);
     final unavailable = widget.unavailableExerciseKeys.contains(selectionKey);
     final selected = _selected.containsKey(selectionKey);
+    final accent = Theme.of(context).colorScheme.primary;
     return Card(
       child: ListTile(
         contentPadding: const EdgeInsets.fromLTRB(14, 7, 8, 7),
         onTap: widget.selectionMode && !unavailable
             ? widget.multiSelect
-                  ? () => setState(() {
-                      if (selected) {
-                        _selected.remove(selectionKey);
-                      } else {
-                        _selected[selectionKey] = selection;
-                      }
-                    })
+                  ? () => _toggleSelection(selectionKey, selection)
                   : () => Navigator.of(context).pop(selection)
             : custom == null
             ? null
@@ -432,7 +454,7 @@ class _ExercisePickerScreenState extends ConsumerState<ExercisePickerScreen> {
           height: 44,
           decoration: BoxDecoration(
             color: custom == null
-                ? const Color(0xFF073B55)
+                ? accent.withValues(alpha: 0.12)
                 : const Color(0xFF272148),
             borderRadius: BorderRadius.circular(14),
           ),
@@ -440,9 +462,7 @@ class _ExercisePickerScreenState extends ConsumerState<ExercisePickerScreen> {
             custom == null
                 ? Icons.fitness_center_rounded
                 : Icons.person_outline_rounded,
-            color: custom == null
-                ? ForgeFitColors.electricBlue
-                : const Color(0xFFB9A7FF),
+            color: custom == null ? accent : const Color(0xFFB9A7FF),
           ),
         ),
         title: Text(
@@ -460,13 +480,7 @@ class _ExercisePickerScreenState extends ConsumerState<ExercisePickerScreen> {
                 value: selected,
                 onChanged: unavailable
                     ? null
-                    : (_) => setState(() {
-                        if (selected) {
-                          _selected.remove(selectionKey);
-                        } else {
-                          _selected[selectionKey] = selection;
-                        }
-                      }),
+                    : (_) => _toggleSelection(selectionKey, selection),
               )
             : custom == null
             ? Icon(

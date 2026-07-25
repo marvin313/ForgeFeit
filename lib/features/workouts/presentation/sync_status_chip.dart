@@ -13,9 +13,9 @@ class SyncStatusChip extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncStatus = ref.watch(syncStatusProvider);
     return asyncStatus.when(
-      loading: () => const _StatusPill(
+      loading: () => _StatusPill(
         label: 'Syncing',
-        color: ForgeFitColors.electricBlue,
+        color: Theme.of(context).colorScheme.primary,
         showProgress: true,
       ),
       error: (_, _) => _StatusPill(
@@ -30,9 +30,9 @@ class SyncStatusChip extends ConsumerWidget {
           color: ForgeFitColors.success,
           icon: Icons.cloud_done_outlined,
         ),
-        SyncState.syncing => const _StatusPill(
+        SyncState.syncing => _StatusPill(
           label: 'Syncing',
-          color: ForgeFitColors.electricBlue,
+          color: Theme.of(context).colorScheme.primary,
           showProgress: true,
         ),
         SyncState.changesWaiting => _StatusPill(

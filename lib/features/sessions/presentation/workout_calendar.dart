@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/forgefit_theme.dart';
 import '../domain/workout_session_models.dart';
 
 /// Groups completed-session UTC instants by a device-local calendar day.
@@ -64,7 +63,7 @@ class _WorkoutCalendarState extends State<WorkoutCalendar> {
     final cells = <Widget>[
       for (var index = 0; index < firstWeekday; index++) const SizedBox(),
       for (var day = 1; day <= days; day++)
-        _dayCell(DateTime(_month.year, _month.month, day), grouped),
+        _dayCell(context, DateTime(_month.year, _month.month, day), grouped),
     ];
     final selected = _selectedDay == null
         ? const <CompletedWorkoutSession>[]
@@ -167,8 +166,8 @@ class _WorkoutCalendarState extends State<WorkoutCalendar> {
                 onTap: () => widget.onOpenSession(session),
                 leading: Text(
                   '${session.endedAt.toLocal().day}',
-                  style: const TextStyle(
-                    color: ForgeFitColors.electricBlue,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
                     fontSize: 20,
                     fontWeight: FontWeight.w900,
                   ),
@@ -188,11 +187,13 @@ class _WorkoutCalendarState extends State<WorkoutCalendar> {
   }
 
   Widget _dayCell(
+    BuildContext context,
     DateTime day,
     Map<DateTime, List<CompletedWorkoutSession>> grouped,
   ) {
     final hasWorkout = grouped.containsKey(day);
     final selected = day == _selectedDay;
+    final accent = Theme.of(context).colorScheme.primary;
     return InkWell(
       key: ValueKey('calendar-day-${day.toIso8601String().split('T').first}'),
       borderRadius: BorderRadius.circular(18),
@@ -200,13 +201,9 @@ class _WorkoutCalendarState extends State<WorkoutCalendar> {
       child: Container(
         margin: const EdgeInsets.all(2),
         decoration: BoxDecoration(
-          color: selected
-              ? ForgeFitColors.electricBlue.withValues(alpha: 0.22)
-              : Colors.transparent,
+          color: selected ? accent.withValues(alpha: 0.22) : Colors.transparent,
           shape: BoxShape.circle,
-          border: hasWorkout
-              ? Border.all(color: ForgeFitColors.electricBlue, width: 1.5)
-              : null,
+          border: hasWorkout ? Border.all(color: accent, width: 1.5) : null,
         ),
         child: Center(
           child: Text(

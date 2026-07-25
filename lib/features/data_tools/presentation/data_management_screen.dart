@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forgefit/app/providers.dart';
+import 'package:forgefit/core/settings/appearance_settings.dart';
 import 'package:forgefit/core/sync/sync_coordinator.dart';
 import 'package:forgefit/features/data_tools/data/data_management_service.dart';
 import 'package:path_provider/path_provider.dart';
@@ -75,6 +76,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
         .read(dataManagementServiceProvider)
         .createJsonBackup(widget.userId);
     await _share(file, 'ForgeFit backup');
+    ForgeFitHaptics.success(ref.read(appearanceProvider).hapticsEnabled);
     _message('Backup ready to save or share.');
   });
 
@@ -83,6 +85,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
         .read(dataManagementServiceProvider)
         .createWorkoutCsv(widget.userId);
     await _share(file, 'ForgeFit workout history');
+    ForgeFitHaptics.success(ref.read(appearanceProvider).hapticsEnabled);
     _message('CSV export ready to save or share.');
   });
 
@@ -131,6 +134,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
             jsonText: utf8.decode(bytes!, allowMalformed: false),
           );
       _refreshData();
+      ForgeFitHaptics.success(ref.read(appearanceProvider).hapticsEnabled);
       _message(
         'Backup restored. Use Sync Now when you are ready to reconcile cloud data.',
       );
@@ -165,6 +169,11 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
       _syncMessage(status),
       error: status.state != SyncState.everythingSynced,
     );
+    if (status.state == SyncState.everythingSynced) {
+      ForgeFitHaptics.success(ref.read(appearanceProvider).hapticsEnabled);
+    } else {
+      ForgeFitHaptics.warning(ref.read(appearanceProvider).hapticsEnabled);
+    }
   });
 
   String _syncMessage(SyncStatus status) => switch (status.state) {
@@ -194,10 +203,13 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
     try {
       await action();
     } on DataManagementException catch (error) {
+      ForgeFitHaptics.warning(ref.read(appearanceProvider).hapticsEnabled);
       _message(error.message, error: true);
     } on FormatException {
+      ForgeFitHaptics.warning(ref.read(appearanceProvider).hapticsEnabled);
       _message('That file is not a valid UTF-8 ForgeFit backup.', error: true);
     } on Object {
+      ForgeFitHaptics.warning(ref.read(appearanceProvider).hapticsEnabled);
       _message(
         'This action could not be completed. Your local data was not changed.',
         error: true,

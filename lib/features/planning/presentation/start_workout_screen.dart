@@ -505,6 +505,7 @@ class _TemplatePreviewSheet extends ConsumerWidget {
                         separatorBuilder: (_, _) => const SizedBox(height: 9),
                         itemBuilder: (context, index) {
                           final exercise = items[index];
+                          final accent = Theme.of(context).colorScheme.primary;
                           return Card(
                             key: ValueKey('preview-exercise-${exercise.id}'),
                             child: Padding(
@@ -516,14 +517,13 @@ class _TemplatePreviewSheet extends ConsumerWidget {
                                     height: 34,
                                     alignment: Alignment.center,
                                     decoration: BoxDecoration(
-                                      color: ForgeFitColors.electricBlue
-                                          .withValues(alpha: 0.12),
+                                      color: accent.withValues(alpha: 0.12),
                                       borderRadius: BorderRadius.circular(11),
                                     ),
                                     child: Text(
                                       '${index + 1}',
-                                      style: const TextStyle(
-                                        color: ForgeFitColors.electricBlue,
+                                      style: TextStyle(
+                                        color: accent,
                                         fontWeight: FontWeight.w900,
                                       ),
                                     ),

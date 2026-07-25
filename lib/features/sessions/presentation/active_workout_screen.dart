@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/settings/appearance_settings.dart';
 import '../../../core/theme/forgefit_theme.dart';
 import '../../planning/domain/planning_models.dart';
 import '../../planning/presentation/exercise_picker_screen.dart';
@@ -21,6 +22,7 @@ class ActiveWorkoutScreen extends StatefulWidget {
     this.onWorkoutFinished,
     this.onWorkoutDiscarded,
     this.onLocalChangeQueued,
+    this.hapticsEnabled = true,
   });
 
   final String userId;
@@ -30,6 +32,7 @@ class ActiveWorkoutScreen extends StatefulWidget {
   final ValueChanged<CompletedWorkoutBundle>? onWorkoutFinished;
   final VoidCallback? onWorkoutDiscarded;
   final VoidCallback? onLocalChangeQueued;
+  final bool hapticsEnabled;
 
   @override
   State<ActiveWorkoutScreen> createState() => _ActiveWorkoutScreenState();
@@ -82,6 +85,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
   Future<void> _addExercise(ActiveWorkoutSession session) async {
     final selection = await _pickExercise();
     if (selection == null || !mounted) return;
+    ForgeFitHaptics.selection(widget.hapticsEnabled);
     await _run('add-exercise', () async {
       await widget.repository.addExercise(
         userId: widget.userId,
@@ -267,13 +271,14 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
     });
   }
 
-  Future<void> _toggleAllSets(ActiveWorkoutExercise exercise) => _run(
-    'complete-all-${exercise.id}',
-    () => widget.repository.toggleAllSetsCompleted(
-      userId: widget.userId,
-      exerciseId: exercise.id,
-    ),
-  );
+  Future<void> _toggleAllSets(ActiveWorkoutExercise exercise) =>
+      _run('complete-all-${exercise.id}', () async {
+        await widget.repository.toggleAllSetsCompleted(
+          userId: widget.userId,
+          exerciseId: exercise.id,
+        );
+        ForgeFitHaptics.success(widget.hapticsEnabled);
+      });
 
   Future<void> _finish(ActiveWorkoutBundle bundle) async {
     await Navigator.of(context).push<void>(
@@ -286,6 +291,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
           onWorkoutFinished: widget.onWorkoutFinished,
           onWorkoutDiscarded: widget.onWorkoutDiscarded,
           onLocalChangeQueued: widget.onLocalChangeQueued,
+          hapticsEnabled: widget.hapticsEnabled,
         ),
       ),
     );
