@@ -11,6 +11,7 @@ import 'package:forgefit/features/planning/domain/planning_models.dart';
 import 'package:forgefit/features/planning/domain/system_exercise_catalog.dart';
 import 'package:forgefit/features/planning/presentation/exercise_picker_screen.dart';
 import 'package:forgefit/features/planning/presentation/start_workout_screen.dart';
+import 'package:forgefit/features/planning/presentation/template_editor_screen.dart';
 import 'package:forgefit/features/planning/presentation/template_library_screen.dart';
 
 const _userId = '10000000-0000-4000-8000-000000000001';
@@ -193,10 +194,132 @@ void main() {
     await tester.tap(find.text(custom.name));
     await tester.pump();
 
-    expect(find.text('Add selected (2)'), findsOneWidget);
+    expect(find.text('Add 2 Exercises'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await _disposeTestApp(tester);
   });
+
+  testWidgets(
+    'template editor adds multiple exercises over repeated picker visits',
+    (tester) async {
+      _useIphoneSize(tester);
+      final custom = await repository.createCustomExercise(
+        userId: _userId,
+        name: 'A Very Long Custom Exercise Name',
+        primaryMuscleGroup: MuscleGroup.shoulders,
+        equipment: ExerciseEquipment.cable,
+      );
+      final template = await repository.createTemplate(
+        userId: _userId,
+        name: 'Upper Body',
+      );
+
+      await tester.pumpWidget(
+        _app(
+          repository,
+          TemplateEditorScreen(userId: _userId, template: template),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Add exercises'));
+      await tester.pumpAndSettle();
+      await _selectPickerExercise(tester, custom.name);
+      await _selectPickerExercise(tester, 'Barbell bench press');
+      await _selectPickerExercise(tester, 'Incline Barbell Bench Press');
+      expect(find.text('Add 3 Exercises'), findsOneWidget);
+      await tester.tap(find.text('Add 3 Exercises'));
+      await tester.pumpAndSettle();
+
+      var snapshot = await repository.getSnapshot(_userId);
+      var entries = snapshot.templateExercises
+          .where((entry) => entry.templateId == template.id && !entry.isDeleted)
+          .toList();
+      expect(entries.map((entry) => entry.exerciseName), [
+        custom.name,
+        'Barbell bench press',
+        'Incline Barbell Bench Press',
+      ]);
+      expect(entries.map((entry) => entry.sortOrder), [0, 1, 2]);
+
+      await tester.tap(find.text('Add exercises'));
+      await tester.pumpAndSettle();
+      await _selectPickerExercise(tester, 'Decline Barbell Bench Press');
+      expect(find.text('Add 1 Exercise'), findsOneWidget);
+      await tester.tap(find.text('Add 1 Exercise'));
+      await tester.pumpAndSettle();
+
+      snapshot = await repository.getSnapshot(_userId);
+      entries = snapshot.templateExercises
+          .where((entry) => entry.templateId == template.id && !entry.isDeleted)
+          .toList();
+      expect(entries, hasLength(4));
+      expect(
+        entries.map((entry) => entry.systemExerciseKey).toSet(),
+        containsAll([
+          'barbell_bench_press',
+          'incline_barbell_bench_press',
+          'decline_barbell_bench_press',
+        ]),
+      );
+      expect(entries.map((entry) => entry.sortOrder), [0, 1, 2, 3]);
+      expect(tester.takeException(), isNull);
+      await _disposeTestApp(tester);
+    },
+  );
+
+  testWidgets('template exercise title keeps usable two-line width', (
+    tester,
+  ) async {
+    _useIphoneSize(tester);
+    final custom = await repository.createCustomExercise(
+      userId: _userId,
+      name: 'A Very Long Custom Exercise Name',
+      primaryMuscleGroup: MuscleGroup.shoulders,
+      equipment: ExerciseEquipment.cable,
+    );
+    final template = await repository.createTemplate(
+      userId: _userId,
+      name: 'Upper Body',
+    );
+    final entry = await repository.addExerciseToTemplate(
+      userId: _userId,
+      templateId: template.id,
+      exercise: custom.selection,
+    );
+
+    await tester.pumpWidget(
+      _app(
+        repository,
+        TemplateEditorScreen(userId: _userId, template: template),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final title = find.byKey(ValueKey('template-exercise-title-${entry.id}'));
+    final text = tester.widget<Text>(title);
+    expect(tester.getSize(title).width, greaterThan(180));
+    expect(text.maxLines, 2);
+    expect(text.softWrap, isTrue);
+    expect(text.overflow, TextOverflow.ellipsis);
+    expect(tester.takeException(), isNull);
+    await _disposeTestApp(tester);
+  });
+}
+
+Future<void> _selectPickerExercise(WidgetTester tester, String name) async {
+  await tester.enterText(
+    find.byKey(const ValueKey('exercise-picker-search')),
+    name,
+  );
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(name).last);
+  await tester.pump();
+  await tester.enterText(
+    find.byKey(const ValueKey('exercise-picker-search')),
+    '',
+  );
+  await tester.pumpAndSettle();
 }
 
 Widget _app(OfflineFirstPlanningRepository repository, Widget home) {

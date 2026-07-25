@@ -370,7 +370,8 @@ class _MetricGrid extends StatelessWidget {
           (value) => DecoratedBox(
             decoration: BoxDecoration(
               color: ForgeFitColors.surface,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: ForgeFitColors.border),
             ),
             child: Padding(
               padding: const EdgeInsets.all(14),
@@ -417,52 +418,57 @@ class _ProgressLineChart extends StatelessWidget {
     }
     final maxValue = points.map((point) => point.value).reduce(_max);
     final accent = Theme.of(context).colorScheme.primary;
-    return SizedBox(
-      height: 230,
-      child: LineChart(
-        LineChartData(
-          minY: 0,
-          maxY: maxValue == 0 ? 1 : maxValue * 1.15,
-          gridData: const FlGridData(show: false),
-          borderData: FlBorderData(show: false),
-          lineTouchData: LineTouchData(
-            enabled: true,
-            touchTooltipData: LineTouchTooltipData(
-              getTooltipItems: (items) => items
-                  .map(
-                    (item) => LineTooltipItem(
-                      '${points[item.x.toInt()].label}\n${_formatMetric(item.y, unit)}',
-                      const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                  )
-                  .toList(growable: false),
-            ),
-          ),
-          titlesData: _chartTitles(points),
-          lineBarsData: [
-            LineChartBarData(
-              isCurved: points.length > 2,
-              color: accent,
-              barWidth: 3,
-              dotData: FlDotData(
-                show: true,
-                getDotPainter: (_, _, _, _) => FlDotCirclePainter(
-                  radius: 4,
-                  color: accent,
-                  strokeColor: ForgeFitColors.background,
-                  strokeWidth: 2,
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 12, 14, 8),
+        child: SizedBox(
+          height: 218,
+          child: LineChart(
+            LineChartData(
+              minY: 0,
+              maxY: maxValue == 0 ? 1 : maxValue * 1.15,
+              gridData: const FlGridData(show: false),
+              borderData: FlBorderData(show: false),
+              lineTouchData: LineTouchData(
+                enabled: true,
+                touchTooltipData: LineTouchTooltipData(
+                  getTooltipItems: (items) => items
+                      .map(
+                        (item) => LineTooltipItem(
+                          '${points[item.x.toInt()].label}\n${_formatMetric(item.y, unit)}',
+                          const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      )
+                      .toList(growable: false),
                 ),
               ),
-              belowBarData: BarAreaData(
-                show: true,
-                color: accent.withValues(alpha: 0.12),
-              ),
-              spots: [
-                for (var index = 0; index < points.length; index++)
-                  FlSpot(index.toDouble(), points[index].value),
+              titlesData: _chartTitles(points),
+              lineBarsData: [
+                LineChartBarData(
+                  isCurved: points.length > 2,
+                  color: accent,
+                  barWidth: 3,
+                  dotData: FlDotData(
+                    show: true,
+                    getDotPainter: (_, _, _, _) => FlDotCirclePainter(
+                      radius: 4,
+                      color: accent,
+                      strokeColor: ForgeFitColors.background,
+                      strokeWidth: 2,
+                    ),
+                  ),
+                  belowBarData: BarAreaData(
+                    show: true,
+                    color: accent.withValues(alpha: 0.12),
+                  ),
+                  spots: [
+                    for (var index = 0; index < points.length; index++)
+                      FlSpot(index.toDouble(), points[index].value),
+                  ],
+                ),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -482,37 +488,42 @@ class _ProgressBarChart extends StatelessWidget {
     }
     final maxValue = points.map((point) => point.value).reduce(_max);
     final accent = Theme.of(context).colorScheme.primary;
-    return SizedBox(
-      height: 230,
-      child: BarChart(
-        BarChartData(
-          maxY: maxValue == 0 ? 1 : maxValue * 1.15,
-          gridData: const FlGridData(show: false),
-          borderData: FlBorderData(show: false),
-          barTouchData: BarTouchData(
-            enabled: true,
-            touchTooltipData: BarTouchTooltipData(
-              getTooltipItem: (group, _, rod, _) => BarTooltipItem(
-                '${points[group.x].label}\n${_formatMetric(rod.toY, unit)}',
-                const TextStyle(fontWeight: FontWeight.w700),
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 12, 14, 8),
+        child: SizedBox(
+          height: 218,
+          child: BarChart(
+            BarChartData(
+              maxY: maxValue == 0 ? 1 : maxValue * 1.15,
+              gridData: const FlGridData(show: false),
+              borderData: FlBorderData(show: false),
+              barTouchData: BarTouchData(
+                enabled: true,
+                touchTooltipData: BarTouchTooltipData(
+                  getTooltipItem: (group, _, rod, _) => BarTooltipItem(
+                    '${points[group.x].label}\n${_formatMetric(rod.toY, unit)}',
+                    const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
               ),
+              titlesData: _chartTitles(points),
+              barGroups: [
+                for (var index = 0; index < points.length; index++)
+                  BarChartGroupData(
+                    x: index,
+                    barRods: [
+                      BarChartRodData(
+                        toY: points[index].value,
+                        color: accent,
+                        width: 14,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ],
+                  ),
+              ],
             ),
           ),
-          titlesData: _chartTitles(points),
-          barGroups: [
-            for (var index = 0; index < points.length; index++)
-              BarChartGroupData(
-                x: index,
-                barRods: [
-                  BarChartRodData(
-                    toY: points[index].value,
-                    color: accent,
-                    width: 14,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ],
-              ),
-          ],
         ),
       ),
     );

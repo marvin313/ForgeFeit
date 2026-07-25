@@ -403,7 +403,7 @@ class _TemplateEditorScreenState extends ConsumerState<TemplateEditorScreen> {
                           FilledButton.tonalIcon(
                             onPressed: _entriesBusy ? null : _addExercise,
                             icon: const Icon(Icons.add_rounded),
-                            label: const Text('Add exercise'),
+                            label: const Text('Add exercises'),
                           ),
                         ],
                       ),
@@ -766,32 +766,40 @@ class _TemplateEditorScreenState extends ConsumerState<TemplateEditorScreen> {
     ];
     return Card(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(10, 8, 4, 8),
+        padding: const EdgeInsets.fromLTRB(8, 8, 6, 8),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ReorderableDragStartListener(
-              index: index,
-              enabled: !_entriesBusy,
-              child: const Padding(
-                padding: EdgeInsets.fromLTRB(4, 16, 10, 16),
-                child: Icon(
-                  Icons.drag_indicator_rounded,
-                  color: Color(0xFF69727E),
+            SizedBox(
+              width: 34,
+              child: ReorderableDragStartListener(
+                index: index,
+                enabled: !_entriesBusy,
+                child: const Padding(
+                  padding: EdgeInsets.fromLTRB(2, 16, 6, 16),
+                  child: Icon(
+                    Icons.drag_indicator_rounded,
+                    color: Color(0xFF69727E),
+                  ),
                 ),
               ),
             ),
+            const SizedBox(width: 4),
             Expanded(
               child: InkWell(
                 onTap: _entriesBusy ? null : () => _configureEntry(entry),
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(12),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  padding: const EdgeInsets.symmetric(vertical: 9),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
+                        key: ValueKey('template-exercise-title-${entry.id}'),
                         entry.exerciseName,
+                        maxLines: 2,
+                        softWrap: true,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w900,
@@ -827,58 +835,63 @@ class _TemplateEditorScreenState extends ConsumerState<TemplateEditorScreen> {
                 ),
               ),
             ),
-            PopupMenuButton<_EntryAction>(
-              enabled: !_entriesBusy,
-              tooltip: 'Exercise actions',
-              onSelected: (action) {
-                switch (action) {
-                  case _EntryAction.configure:
-                    _configureEntry(entry);
-                  case _EntryAction.replace:
-                    _replaceEntry(entry);
-                  case _EntryAction.duplicate:
-                    _duplicateEntry(entry);
-                  case _EntryAction.remove:
-                    _removeEntry(entry);
-                }
-              },
-              itemBuilder: (context) => const [
-                PopupMenuItem(
-                  value: _EntryAction.configure,
-                  child: ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(Icons.tune_rounded),
-                    title: Text('Edit targets'),
-                  ),
-                ),
-                PopupMenuItem(
-                  value: _EntryAction.replace,
-                  child: ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(Icons.swap_horiz_rounded),
-                    title: Text('Replace exercise'),
-                  ),
-                ),
-                PopupMenuItem(
-                  value: _EntryAction.duplicate,
-                  child: ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(Icons.copy_rounded),
-                    title: Text('Duplicate entry'),
-                  ),
-                ),
-                PopupMenuItem(
-                  value: _EntryAction.remove,
-                  child: ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(
-                      Icons.delete_outline_rounded,
-                      color: ForgeFitColors.danger,
+            SizedBox(
+              width: 40,
+              height: 40,
+              child: PopupMenuButton<_EntryAction>(
+                padding: EdgeInsets.zero,
+                enabled: !_entriesBusy,
+                tooltip: 'Exercise actions',
+                onSelected: (action) {
+                  switch (action) {
+                    case _EntryAction.configure:
+                      _configureEntry(entry);
+                    case _EntryAction.replace:
+                      _replaceEntry(entry);
+                    case _EntryAction.duplicate:
+                      _duplicateEntry(entry);
+                    case _EntryAction.remove:
+                      _removeEntry(entry);
+                  }
+                },
+                itemBuilder: (context) => const [
+                  PopupMenuItem(
+                    value: _EntryAction.configure,
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.tune_rounded),
+                      title: Text('Edit targets'),
                     ),
-                    title: Text('Remove exercise'),
                   ),
-                ),
-              ],
+                  PopupMenuItem(
+                    value: _EntryAction.replace,
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.swap_horiz_rounded),
+                      title: Text('Replace exercise'),
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: _EntryAction.duplicate,
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.copy_rounded),
+                      title: Text('Duplicate entry'),
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: _EntryAction.remove,
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(
+                        Icons.delete_outline_rounded,
+                        color: ForgeFitColors.danger,
+                      ),
+                      title: Text('Remove exercise'),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

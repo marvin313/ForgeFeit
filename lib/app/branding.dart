@@ -7,40 +7,24 @@ class ForgeFitBrand extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final markSize = compact ? 40.0 : 64.0;
-    final accent = Theme.of(context).colorScheme.primary;
+    final markSize = compact ? 34.0 : 64.0;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
+        Image.asset(
+          'assets/branding/forgefit_logo_mark.png',
           width: markSize,
           height: markSize,
-          decoration: BoxDecoration(
-            color: accent,
-            borderRadius: BorderRadius.circular(compact ? 13 : 20),
-          ),
-          child: Icon(
-            Icons.fitness_center_rounded,
-            color: Theme.of(context).colorScheme.onPrimary,
-            size: compact ? 24 : 36,
-          ),
+          filterQuality: FilterQuality.high,
         ),
-        SizedBox(width: compact ? 12 : 16),
-        Text.rich(
-          TextSpan(
-            children: [
-              const TextSpan(text: 'FORGE'),
-              TextSpan(
-                text: 'FIT',
-                style: TextStyle(color: Theme.of(context).colorScheme.primary),
-              ),
-            ],
-          ),
+        SizedBox(width: compact ? 9 : 16),
+        Text(
+          'FORGEFIT',
           style: TextStyle(
             color: Colors.white,
-            fontSize: compact ? 23 : 34,
+            fontSize: compact ? 18 : 34,
             fontWeight: FontWeight.w900,
-            letterSpacing: compact ? 0.7 : 1.1,
+            letterSpacing: compact ? 0.3 : 1.1,
           ),
         ),
       ],

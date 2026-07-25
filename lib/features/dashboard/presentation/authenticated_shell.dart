@@ -9,7 +9,6 @@ import 'package:forgefit/core/settings/appearance_settings.dart';
 import 'package:forgefit/features/auth/presentation/auth_controller.dart';
 import 'package:forgefit/features/auth/presentation/auth_validation.dart';
 import 'package:forgefit/features/dashboard/presentation/dashboard_screen.dart';
-import 'package:forgefit/features/data_tools/presentation/data_management_screen.dart';
 import 'package:forgefit/features/planning/presentation/start_workout_screen.dart';
 import 'package:forgefit/features/planning/presentation/template_editor_screen.dart';
 import 'package:forgefit/features/planning/presentation/template_library_screen.dart';
@@ -169,12 +168,6 @@ class _AuthenticatedShellState extends ConsumerState<AuthenticatedShell>
     ),
   );
 
-  Future<void> _openDataManagement() => Navigator.of(context).push<void>(
-    MaterialPageRoute(
-      builder: (_) => DataManagementScreen(userId: widget.user.id),
-    ),
-  );
-
   Future<void> _openSettings() => Navigator.of(context).push<void>(
     MaterialPageRoute(
       builder: (_) => SettingsScreen(
@@ -327,24 +320,7 @@ class _AuthenticatedShellState extends ConsumerState<AuthenticatedShell>
             onPressed: _openSettings,
             icon: const Icon(Icons.settings_outlined),
           ),
-          IconButton(
-            tooltip: 'Data Management',
-            onPressed: _openDataManagement,
-            icon: const Icon(Icons.folder_copy_outlined),
-          ),
-          IconButton(
-            tooltip: 'Retry sync',
-            onPressed: _restoreAndSync,
-            icon: const Icon(Icons.sync_rounded),
-          ),
-          IconButton(
-            tooltip: 'Log out',
-            onPressed: ref.watch(authControllerProvider).isLoading
-                ? null
-                : _logout,
-            icon: const Icon(Icons.logout_rounded),
-          ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
         ],
       ),
       body: IndexedStack(index: _selectedIndex, children: pages),

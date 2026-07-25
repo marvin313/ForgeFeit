@@ -3,13 +3,13 @@ import 'package:flutter/material.dart';
 abstract final class ForgeFitColors {
   static const background = Color(0xFF0D0F12);
   static const navigation = Color(0xFF101216);
-  static const surface = Color(0xFF1A1D22);
-  static const surfaceHigh = Color(0xFF24282E);
+  static const surface = Color(0xFF171A1E);
+  static const surfaceHigh = Color(0xFF20242A);
   static const field = Color(0xFF171A1F);
   static const textPrimary = Color(0xFFF1F3F5);
   static const textSecondary = Color(0xFFA9AFB7);
   static const textTertiary = Color(0xFF747B85);
-  static const border = Color(0xFF2A2F36);
+  static const border = Color(0xFF292E35);
   static const success = Color(0xFF64C678);
   static const warning = Color(0xFFF3B24A);
   static const danger = Color(0xFFFF6B78);
@@ -71,7 +71,7 @@ ThemeData buildForgeFitTheme({Color accent = ForgeFitColors.electricBlue}) {
   final textTheme = base.textTheme.copyWith(
     headlineSmall: base.textTheme.headlineSmall?.copyWith(
       color: ForgeFitColors.textPrimary,
-      fontSize: 26,
+      fontSize: 24,
       fontWeight: FontWeight.w800,
       letterSpacing: -0.4,
     ),
@@ -114,14 +114,14 @@ ThemeData buildForgeFitTheme({Color accent = ForgeFitColors.electricBlue}) {
       margin: EdgeInsets.zero,
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         side: const BorderSide(color: ForgeFitColors.border),
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: ForgeFitColors.field,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       labelStyle: const TextStyle(color: ForgeFitColors.textSecondary),
       hintStyle: const TextStyle(color: ForgeFitColors.textTertiary),
       border: _inputBorder(ForgeFitColors.border),
@@ -136,18 +136,18 @@ ThemeData buildForgeFitTheme({Color accent = ForgeFitColors.electricBlue}) {
         foregroundColor: onPrimary,
         disabledBackgroundColor: ForgeFitColors.surfaceHigh,
         disabledForegroundColor: ForgeFitColors.textTertiary,
-        minimumSize: const Size.fromHeight(52),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+        minimumSize: const Size(0, 44),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: ForgeFitColors.textPrimary,
-        minimumSize: const Size.fromHeight(52),
+        minimumSize: const Size(0, 44),
         side: const BorderSide(color: ForgeFitColors.border),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
@@ -159,13 +159,13 @@ ThemeData buildForgeFitTheme({Color accent = ForgeFitColors.electricBlue}) {
     floatingActionButtonTheme: FloatingActionButtonThemeData(
       backgroundColor: primary,
       foregroundColor: onPrimary,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ),
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: ForgeFitColors.navigation,
       indicatorColor: Colors.transparent,
       surfaceTintColor: Colors.transparent,
-      height: 68,
+      height: 64,
       labelTextStyle: mutedLabel,
       iconTheme: WidgetStateProperty.resolveWith(
         (states) => IconThemeData(
@@ -190,7 +190,7 @@ ThemeData buildForgeFitTheme({Color accent = ForgeFitColors.electricBlue}) {
         color: primary,
         fontWeight: FontWeight.w800,
       ),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
     ),
     tabBarTheme: TabBarThemeData(
       labelColor: primary,
@@ -211,6 +211,6 @@ ThemeData buildForgeFitTheme({Color accent = ForgeFitColors.electricBlue}) {
 
 OutlineInputBorder _inputBorder(Color color, {double width = 1}) =>
     OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(10),
       borderSide: BorderSide(color: color, width: width),
     );

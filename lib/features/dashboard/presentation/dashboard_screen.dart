@@ -61,36 +61,11 @@ class DashboardScreen extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(20, 24, 20, 120),
             sliver: SliverList.list(
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _greeting(),
-                            style: const TextStyle(
-                              color: Color(0xFF8F99A5),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            displayName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.headlineSmall
-                                ?.copyWith(fontWeight: FontWeight.w900),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    SyncStatusChip(userId: userId),
-                  ],
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: SyncStatusChip(userId: userId),
                 ),
-                const SizedBox(height: 26),
+                const SizedBox(height: 12),
                 activeWorkout.when(
                   loading: () => const SizedBox.shrink(),
                   error: (_, _) => const SizedBox.shrink(),
@@ -104,6 +79,19 @@ class DashboardScreen extends ConsumerWidget {
                           ),
                         ),
                 ),
+                completedSessions.when(
+                  loading: () => const _SummaryLoading(),
+                  error: (_, _) => _SummaryError(
+                    onRetry: () => ref.invalidate(
+                      completedWorkoutSessionsProvider(userId),
+                    ),
+                  ),
+                  data: (items) => _WeekTrainingCard(
+                    sessions: items,
+                    onShowCalendar: onShowCalendar,
+                  ),
+                ),
+                const SizedBox(height: 14),
                 _StartWorkoutHero(
                   onStartWorkout: onStartWorkout,
                   onQuickLog: onQuickLog,
@@ -131,19 +119,16 @@ class DashboardScreen extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 completedSessions.when(
                   loading: () => const _SummaryLoading(),
-                  error: (_, _) => _SummaryError(
-                    onRetry: () => ref.invalidate(
-                      completedWorkoutSessionsProvider(userId),
-                    ),
-                  ),
+                  error: (_, _) => const SizedBox.shrink(),
                   data: (items) => _WorkoutSummary(
                     sessions: items,
                     onShowCalendar: onShowCalendar,
                   ),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 24),
                 Row(
                   children: [
                     Expanded(
@@ -221,13 +206,6 @@ class DashboardScreen extends ConsumerWidget {
       ),
     );
   }
-
-  String _greeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) return 'GOOD MORNING';
-    if (hour < 18) return 'GOOD AFTERNOON';
-    return 'GOOD EVENING';
-  }
 }
 
 class _StartWorkoutHero extends StatelessWidget {
@@ -241,77 +219,21 @@ class _StartWorkoutHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: colors.primaryContainer,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colors.primary.withValues(alpha: 0.32)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'READY TO TRAIN?',
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: colors.primary,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.1,
-                      ),
-                    ),
-                    const SizedBox(height: 7),
-                    Text(
-                      'Start your workout',
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(
-                            color: colors.onPrimaryContainer,
-                            fontWeight: FontWeight.w900,
-                          ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Choose any template or train without one.',
-                      style: TextStyle(
-                        color: ForgeFitColors.textSecondary,
-                        height: 1.35,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Icon(
-                Icons.fitness_center_rounded,
-                color: colors.primary,
-                size: 54,
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          FilledButton.icon(
-            onPressed: onStartWorkout,
-            style: FilledButton.styleFrom(
-              minimumSize: const Size.fromHeight(48),
-            ),
-            icon: const Icon(Icons.play_arrow_rounded),
-            label: const Text('Start Workout'),
-          ),
-          TextButton.icon(
-            onPressed: onQuickLog,
-            style: TextButton.styleFrom(minimumSize: const Size.fromHeight(44)),
-            icon: const Icon(Icons.flash_on_outlined, size: 19),
-            label: const Text('Quick log one set'),
-          ),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        FilledButton.icon(
+          onPressed: onStartWorkout,
+          icon: const Icon(Icons.play_arrow_rounded),
+          label: const Text('START WORKOUT'),
+        ),
+        const SizedBox(height: 2),
+        TextButton.icon(
+          onPressed: onQuickLog,
+          icon: const Icon(Icons.flash_on_outlined, size: 18),
+          label: const Text('Quick log one set'),
+        ),
+      ],
     );
   }
 }
@@ -519,6 +441,201 @@ class _RecentSessionCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _WeekTrainingCard extends StatelessWidget {
+  const _WeekTrainingCard({
+    required this.sessions,
+    required this.onShowCalendar,
+  });
+
+  final List<CompletedWorkoutSession> sessions;
+  final VoidCallback onShowCalendar;
+
+  @override
+  Widget build(BuildContext context) {
+    final today = DateTime.now().toLocal();
+    final start = DateTime(today.year, today.month, today.day - 6);
+    final end = DateTime(today.year, today.month, today.day + 1);
+    final thisWeek = sessions
+        .where(
+          (session) =>
+              !session.isDeleted &&
+              !session.endedAt.toLocal().isBefore(start) &&
+              session.endedAt.toLocal().isBefore(end),
+        )
+        .toList(growable: false);
+    final sets = thisWeek.fold<int>(
+      0,
+      (total, session) => total + session.workingSetCount,
+    );
+    final volume = thisWeek.fold<double>(
+      0,
+      (total, session) => total + session.totalVolumeKg,
+    );
+    final completedDays = {
+      for (final session in thisWeek)
+        DateTime(
+          session.endedAt.toLocal().year,
+          session.endedAt.toLocal().month,
+          session.endedAt.toLocal().day,
+        ),
+    };
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onShowCalendar,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 13, 14, 12),
+          child: Column(
+            children: [
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'THIS WEEK',
+                  style: TextStyle(
+                    color: ForgeFitColors.textSecondary,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.7,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _WeekMetric(
+                      value: '${thisWeek.length}',
+                      label: 'Workouts',
+                    ),
+                  ),
+                  Expanded(
+                    child: _WeekMetric(value: '$sets', label: 'Sets'),
+                  ),
+                  Expanded(
+                    child: _WeekMetric(
+                      value: _compactVolume(volume),
+                      label: 'kg Volume',
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  for (var index = 0; index < 7; index++)
+                    Expanded(
+                      child: _WeekDay(
+                        day: start.add(Duration(days: index)),
+                        completed: completedDays.contains(
+                          DateTime(start.year, start.month, start.day + index),
+                        ),
+                        isToday: DateUtils.isSameDay(
+                          start.add(Duration(days: index)),
+                          today,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _compactVolume(double value) {
+    if (value >= 1000) return '${(value / 1000).toStringAsFixed(1)}k';
+    return value == value.roundToDouble()
+        ? value.toInt().toString()
+        : value.toStringAsFixed(1);
+  }
+}
+
+class _WeekMetric extends StatelessWidget {
+  const _WeekMetric({required this.value, required this.label});
+
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      Text(
+        value,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w900),
+      ),
+      const SizedBox(height: 2),
+      Text(
+        label,
+        style: const TextStyle(
+          color: ForgeFitColors.textTertiary,
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    ],
+  );
+}
+
+class _WeekDay extends StatelessWidget {
+  const _WeekDay({
+    required this.day,
+    required this.completed,
+    required this.isToday,
+  });
+
+  final DateTime day;
+  final bool completed;
+  final bool isToday;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = Theme.of(context).colorScheme.primary;
+    return Column(
+      children: [
+        Text(
+          DateFormat('E').format(day).substring(0, 1).toUpperCase(),
+          style: const TextStyle(
+            color: ForgeFitColors.textTertiary,
+            fontSize: 9,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          width: 24,
+          height: 24,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: isToday ? accent.withValues(alpha: 0.18) : null,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: completed
+                  ? accent
+                  : isToday
+                  ? accent.withValues(alpha: 0.55)
+                  : ForgeFitColors.border,
+            ),
+          ),
+          child: completed
+              ? Icon(Icons.check_rounded, size: 15, color: accent)
+              : Text(
+                  '${day.day}',
+                  style: const TextStyle(
+                    color: ForgeFitColors.textSecondary,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+        ),
+      ],
     );
   }
 }
