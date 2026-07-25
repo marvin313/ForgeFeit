@@ -164,6 +164,39 @@ void main() {
     expect(tester.takeException(), isNull);
     await _disposeTestApp(tester);
   });
+
+  testWidgets('exercise picker selects multiple exercises in one visit', (
+    tester,
+  ) async {
+    _useIphoneSize(tester);
+    final custom = await repository.createCustomExercise(
+      userId: _userId,
+      name: 'Private rotation',
+      primaryMuscleGroup: MuscleGroup.core,
+      equipment: ExerciseEquipment.cable,
+    );
+    await tester.pumpWidget(
+      _app(
+        repository,
+        const ExercisePickerScreen(userId: _userId, multiSelect: true),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Ab wheel rollout'));
+    await tester.pump();
+    await tester.scrollUntilVisible(
+      find.text(custom.name),
+      160,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(find.text(custom.name));
+    await tester.pump();
+
+    expect(find.text('Add selected (2)'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await _disposeTestApp(tester);
+  });
 }
 
 Widget _app(OfflineFirstPlanningRepository repository, Widget home) {

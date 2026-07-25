@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/forgefit_theme.dart';
@@ -39,8 +37,6 @@ class ActiveWorkoutScreen extends StatefulWidget {
 
 class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
   late Stream<ActiveWorkoutBundle?> _stream;
-  Timer? _clock;
-  DateTime _now = DateTime.now();
   final Set<String> _busy = {};
   final Map<String, Future<PreviousPerformance?>> _previous = {};
 
@@ -48,9 +44,6 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
   void initState() {
     super.initState();
     _stream = widget.repository.watchActiveWorkout(widget.userId);
-    _clock = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() => _now = DateTime.now());
-    });
   }
 
   @override
@@ -61,12 +54,6 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
       _stream = widget.repository.watchActiveWorkout(widget.userId);
       _previous.clear();
     }
-  }
-
-  @override
-  void dispose() {
-    _clock?.cancel();
-    super.dispose();
   }
 
   Future<void> _run(String key, Future<void> Function() action) async {
@@ -280,112 +267,13 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
     });
   }
 
-  Future<void> _toggleSet(ActiveWorkoutSet set) async {
-    await _run('complete-${set.id}', () async {
-      if (set.isCompleted) {
-        await widget.repository.uncompleteSet(
-          userId: widget.userId,
-          setId: set.id,
-        );
-      } else {
-        await widget.repository.completeSet(
-          userId: widget.userId,
-          setId: set.id,
-        );
-      }
-    });
-  }
-
-  Future<void> _changeRestDuration(ActiveWorkoutSession session) async {
-    final controller = TextEditingController(
-      text:
-          '${session.restTimerDurationSeconds > 0 ? session.restTimerDurationSeconds : 90}',
-    );
-    final seconds = await showDialog<int>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Rest duration'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            labelText: 'Seconds',
-            helperText: 'Between 1 second and 24 hours',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final value = int.tryParse(controller.text.trim());
-              if (value != null && value >= 1 && value <= 86400) {
-                Navigator.pop(context, value);
-              }
-            },
-            child: const Text('Start'),
-          ),
-        ],
-      ),
-    );
-    controller.dispose();
-    if (seconds == null || !mounted) return;
-    await _run('timer', () async {
-      await widget.repository.startRestTimer(
-        userId: widget.userId,
-        sessionId: session.id,
-        durationSeconds: seconds,
-      );
-    });
-  }
-
-  Future<void> _timerAction(
-    ActiveWorkoutSession session,
-    _TimerAction action,
-  ) async {
-    if (action == _TimerAction.change) return _changeRestDuration(session);
-    await _run('timer', () async {
-      switch (action) {
-        case _TimerAction.change:
-          break;
-        case _TimerAction.pause:
-          await widget.repository.pauseRestTimer(
-            userId: widget.userId,
-            sessionId: session.id,
-          );
-        case _TimerAction.resume:
-          await widget.repository.resumeRestTimer(
-            userId: widget.userId,
-            sessionId: session.id,
-          );
-        case _TimerAction.reset:
-          await widget.repository.resetRestTimer(
-            userId: widget.userId,
-            sessionId: session.id,
-          );
-        case _TimerAction.skip:
-          await widget.repository.skipRestTimer(
-            userId: widget.userId,
-            sessionId: session.id,
-          );
-        case _TimerAction.add:
-          await widget.repository.adjustRestTimer(
-            userId: widget.userId,
-            sessionId: session.id,
-            seconds: 15,
-          );
-        case _TimerAction.subtract:
-          await widget.repository.adjustRestTimer(
-            userId: widget.userId,
-            sessionId: session.id,
-            seconds: -15,
-          );
-      }
-    });
-  }
+  Future<void> _toggleAllSets(ActiveWorkoutExercise exercise) => _run(
+    'complete-all-${exercise.id}',
+    () => widget.repository.toggleAllSetsCompleted(
+      userId: widget.userId,
+      exerciseId: exercise.id,
+    ),
+  );
 
   Future<void> _finish(ActiveWorkoutBundle bundle) async {
     await Navigator.of(context).push<void>(
@@ -504,21 +392,6 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
             buildDefaultDragHandles: false,
             header: Column(
               children: [
-                _WorkoutClockCard(session: session, now: _now),
-                const SizedBox(height: 12),
-                _RestTimerCard(
-                  session: session,
-                  now: _now,
-                  busy: _busy.contains('timer'),
-                  onAction: (action) => _timerAction(session, action),
-                  onAutoStartChanged: (enabled) => _run('timer', () async {
-                    await widget.repository.setAutomaticRestTimer(
-                      userId: widget.userId,
-                      sessionId: session.id,
-                      enabled: enabled,
-                    );
-                  }),
-                ),
                 if ((session.notes ?? '').isNotEmpty) ...[
                   const SizedBox(height: 12),
                   Card(
@@ -576,7 +449,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
                   onRemove: () => _removeExercise(exercise),
                   onEditNotes: () => _editExerciseNotes(exercise),
                   onEditSet: _editSet,
-                  onToggleSet: _toggleSet,
+                  onToggleAllSets: () => _toggleAllSets(exercise),
                   onSetAction: _setAction,
                   onAddSet: () => _run('add-set-${exercise.id}', () async {
                     await widget.repository.addSet(
@@ -624,7 +497,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
   }
 }
 
-class _WorkoutClockCard extends StatelessWidget {
+/*class _WorkoutClockCard extends StatelessWidget {
   const _WorkoutClockCard({required this.session, required this.now});
 
   final ActiveWorkoutSession session;
@@ -815,6 +688,8 @@ class _TimerButton extends StatelessWidget {
   }
 }
 
+*/
+
 class _ExerciseCard extends StatelessWidget {
   const _ExerciseCard({
     required this.exercise,
@@ -827,7 +702,7 @@ class _ExerciseCard extends StatelessWidget {
     required this.onRemove,
     required this.onEditNotes,
     required this.onEditSet,
-    required this.onToggleSet,
+    required this.onToggleAllSets,
     required this.onSetAction,
     required this.onAddSet,
     required this.onDuplicatePrevious,
@@ -844,7 +719,7 @@ class _ExerciseCard extends StatelessWidget {
   final VoidCallback onRemove;
   final VoidCallback onEditNotes;
   final ValueChanged<ActiveWorkoutSet> onEditSet;
-  final ValueChanged<ActiveWorkoutSet> onToggleSet;
+  final VoidCallback onToggleAllSets;
   final void Function(ActiveWorkoutSet, _SetAction) onSetAction;
   final VoidCallback onAddSet;
   final VoidCallback onDuplicatePrevious;
@@ -922,6 +797,23 @@ class _ExerciseCard extends StatelessWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              key: ValueKey('complete-all-sets-${exercise.id}'),
+              onPressed: busy.contains('complete-all-${exercise.id}')
+                  ? null
+                  : onToggleAllSets,
+              icon: Icon(
+                sets.isNotEmpty && sets.every((set) => set.isCompleted)
+                    ? Icons.check_circle_rounded
+                    : Icons.done_all_rounded,
+              ),
+              label: Text(
+                sets.isNotEmpty && sets.every((set) => set.isCompleted)
+                    ? 'All sets complete — undo'
+                    : 'Complete all valid sets',
+              ),
+            ),
             if ((exercise.notes ?? '').isNotEmpty) ...[
               const SizedBox(height: 10),
               Text(
@@ -996,8 +888,6 @@ class _ExerciseCard extends StatelessWidget {
                     displayIndex: setIndex + 1,
                     weightUnit: weightUnit,
                     dragIndex: setIndex,
-                    busy: busy.contains('complete-${set.id}'),
-                    onToggle: () => onToggleSet(set),
                     onEdit: () => onEditSet(set),
                     onAction: (action) => onSetAction(set, action),
                   );
@@ -1035,8 +925,6 @@ class _ActiveSetTile extends StatelessWidget {
     required this.displayIndex,
     required this.weightUnit,
     required this.dragIndex,
-    required this.busy,
-    required this.onToggle,
     required this.onEdit,
     required this.onAction,
   });
@@ -1045,8 +933,6 @@ class _ActiveSetTile extends StatelessWidget {
   final int displayIndex;
   final String weightUnit;
   final int dragIndex;
-  final bool busy;
-  final VoidCallback onToggle;
   final VoidCallback onEdit;
   final ValueChanged<_SetAction> onAction;
 
@@ -1141,10 +1027,6 @@ class _ActiveSetTile extends StatelessWidget {
                 child: Text('Delete set'),
               ),
             ],
-          ),
-          Checkbox.adaptive(
-            value: set.isCompleted,
-            onChanged: busy ? null : (_) => onToggle(),
           ),
         ],
       ),
@@ -1481,8 +1363,6 @@ enum _ExerciseAction { notes, replace, remove }
 
 enum _SetAction { edit, duplicate, copyWeight, copyReps, copyBoth, delete }
 
-enum _TimerAction { change, pause, resume, reset, skip, add, subtract }
-
 class _WorkoutDraft {
   const _WorkoutDraft(this.name, this.notes);
   final String name;
@@ -1515,7 +1395,6 @@ String _targetSummary(ActiveWorkoutExercise exercise, String unit) {
   final parts = <String>[
     '${exercise.plannedWorkingSets} working',
     '${exercise.minTargetReps}-${exercise.maxTargetReps} reps',
-    '${exercise.restSeconds}s rest',
   ];
   if (exercise.plannedWarmupSets > 0) {
     parts.insert(0, '${exercise.plannedWarmupSets} warm-up');

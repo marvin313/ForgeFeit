@@ -112,7 +112,78 @@ void main() {
   );
 
   test(
-    'set lifecycle, validation, ordering and timestamp-based timer persist',
+    'complete-all marks only valid sets and a second press clears every set',
+    () async {
+      final active = await repository.startEmptyWorkout(userId: 'user-a');
+      final exercise = await repository.addExercise(
+        userId: 'user-a',
+        sessionId: active.session.id,
+        exercise: SystemExerciseCatalog.byKey('barbell_bench_press')!,
+      );
+      final valid = await repository.addSet(
+        userId: 'user-a',
+        exerciseId: exercise.id,
+        weightKg: 80,
+        repetitions: 8,
+      );
+      final empty = await repository.addSet(
+        userId: 'user-a',
+        exerciseId: exercise.id,
+      );
+
+      await repository.toggleAllSetsCompleted(
+        userId: 'user-a',
+        exerciseId: exercise.id,
+      );
+      var sets = (await repository.getActiveWorkout(
+        'user-a',
+      ))!.setsFor(exercise.id);
+      expect(sets.singleWhere((set) => set.id == valid.id).isCompleted, isTrue);
+      expect(
+        sets.singleWhere((set) => set.id == empty.id).isCompleted,
+        isFalse,
+      );
+
+      final addedAfterCompletion = await repository.addSet(
+        userId: 'user-a',
+        exerciseId: exercise.id,
+        weightKg: 82.5,
+        repetitions: 6,
+      );
+      sets = (await repository.getActiveWorkout(
+        'user-a',
+      ))!.setsFor(exercise.id);
+      expect(
+        sets
+            .singleWhere((set) => set.id == addedAfterCompletion.id)
+            .isCompleted,
+        isFalse,
+      );
+
+      await repository.toggleAllSetsCompleted(
+        userId: 'user-a',
+        exerciseId: exercise.id,
+      );
+      sets = (await repository.getActiveWorkout(
+        'user-a',
+      ))!.setsFor(exercise.id);
+      expect(
+        sets.where((set) => set.id != empty.id).every((set) => set.isCompleted),
+        isTrue,
+      );
+      await repository.toggleAllSetsCompleted(
+        userId: 'user-a',
+        exerciseId: exercise.id,
+      );
+      sets = (await repository.getActiveWorkout(
+        'user-a',
+      ))!.setsFor(exercise.id);
+      expect(sets.every((set) => !set.isCompleted), isTrue);
+    },
+  );
+
+  test(
+    'set lifecycle, validation, ordering and compatibility timer APIs persist',
     () async {
       final active = await repository.startEmptyWorkout(userId: 'user-a');
       final exercise = await repository.addExercise(
@@ -190,9 +261,14 @@ void main() {
       );
       expect(completed.isCompleted, isTrue);
       bundle = (await repository.getActiveWorkout('user-a'))!;
-      expect(bundle.session.restTimerState, RestTimerState.running);
-      expect(bundle.session.restSecondsAt(clock.call()), 90);
+      expect(bundle.session.restTimerState, RestTimerState.idle);
+      expect(bundle.session.restSecondsAt(clock.call()), 0);
 
+      await repository.startRestTimer(
+        userId: 'user-a',
+        sessionId: active.session.id,
+        durationSeconds: 90,
+      );
       clock.advance(const Duration(seconds: 30));
       var timer = await repository.pauseRestTimer(
         userId: 'user-a',

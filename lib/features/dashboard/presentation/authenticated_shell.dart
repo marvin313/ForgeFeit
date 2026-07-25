@@ -31,6 +31,7 @@ class _AuthenticatedShellState extends ConsumerState<AuthenticatedShell>
     with WidgetsBindingObserver {
   bool _isRecovering = false;
   int _selectedIndex = 0;
+  bool _showHistoryCalendar = false;
 
   String get _displayName {
     final metadataName = widget.user.userMetadata?['display_name'];
@@ -261,6 +262,10 @@ class _AuthenticatedShellState extends ConsumerState<AuthenticatedShell>
         onQuickLog: _openWorkoutForm,
         onShowTemplates: () => setState(() => _selectedIndex = 1),
         onShowHistory: () => setState(() => _selectedIndex = 2),
+        onShowCalendar: () => setState(() {
+          _selectedIndex = 2;
+          _showHistoryCalendar = true;
+        }),
         onShowPersonalRecords: _openPersonalRecords,
       ),
       TemplateLibraryScreen(userId: widget.user.id),
@@ -273,6 +278,7 @@ class _AuthenticatedShellState extends ConsumerState<AuthenticatedShell>
         onStartWorkout: _openStartWorkout,
         onLocalChangeQueued: _requestSessionSync,
         embedded: true,
+        showCalendar: _showHistoryCalendar,
       ),
     ];
 
@@ -322,7 +328,10 @@ class _AuthenticatedShellState extends ConsumerState<AuthenticatedShell>
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) {
-          setState(() => _selectedIndex = index);
+          setState(() {
+            _selectedIndex = index;
+            if (index == 2) _showHistoryCalendar = false;
+          });
         },
         destinations: const [
           NavigationDestination(

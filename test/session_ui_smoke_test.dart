@@ -46,8 +46,13 @@ void main() {
     await tester.pump();
 
     expect(find.text('Push Strength'), findsOneWidget);
-    expect(find.byKey(const ValueKey('elapsed-workout-time')), findsOneWidget);
-    expect(find.text('Rest timer'), findsOneWidget);
+    expect(find.byKey(const ValueKey('elapsed-workout-time')), findsNothing);
+    expect(find.text('Rest timer'), findsNothing);
+    expect(find.byKey(const ValueKey('rest-timer-value')), findsNothing);
+    expect(
+      find.byKey(const ValueKey('complete-all-sets-active-exercise')),
+      findsOneWidget,
+    );
     expect(find.text('Barbell Bench Press'), findsOneWidget);
     expect(find.textContaining('176.4 lb'), findsWidgets);
     expect(
@@ -79,6 +84,17 @@ void main() {
     expect(find.text('Push Strength'), findsOneWidget);
     expect(find.text('LEGACY QUICK LOG'), findsOneWidget);
     expect(find.textContaining('kg volume'), findsOneWidget);
+
+    await tester.tap(
+      find.byKey(const ValueKey('session-history-calendar-toggle')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('workout-calendar-view')), findsOneWidget);
+    await tester.tap(
+      find.byKey(const ValueKey('session-history-calendar-toggle')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('LEGACY QUICK LOG'), findsOneWidget);
 
     await tester.enterText(
       find.byKey(const ValueKey('session-history-search')),

@@ -965,6 +965,7 @@ class OfflineFirstPlanningRepository {
     return _database.transaction(() async {
       await _requireActiveTemplate(owner, template);
       final selection = await _canonicalSelection(owner, exercise);
+      await _ensureTemplateExerciseIsUnique(owner, template, selection);
       final now = _now();
       final entry = TemplateExercise(
         id: _newId(),
@@ -1063,6 +1064,12 @@ class OfflineFirstPlanningRepository {
       final current = await _requireActiveTemplateExercise(owner, id);
       await _requireActiveTemplate(owner, current.templateId);
       final selection = await _canonicalSelection(owner, replacement);
+      await _ensureTemplateExerciseIsUnique(
+        owner,
+        current.templateId,
+        selection,
+        excludingId: current.id,
+      );
       final now = _now();
       final updated = TemplateExercise(
         id: current.id,
@@ -1942,6 +1949,25 @@ class OfflineFirstPlanningRepository {
   Future<int> _nextExerciseOrder(String userId, String templateId) async {
     final rows = await _activeTemplateExerciseRows(userId, templateId);
     return _nextOrder(rows.map((row) => row.sortOrder));
+  }
+
+  Future<void> _ensureTemplateExerciseIsUnique(
+    String userId,
+    String templateId,
+    ExerciseSelection selection, {
+    String? excludingId,
+  }) async {
+    final rows = await _activeTemplateExerciseRows(userId, templateId);
+    final duplicate = rows.any(
+      (row) =>
+          row.id != excludingId &&
+          (selection.source == ExerciseSource.custom
+              ? row.customExerciseId == selection.exerciseId
+              : row.systemExerciseKey == selection.exerciseId),
+    );
+    if (duplicate) {
+      throw StateError('This exercise is already in the template.');
+    }
   }
 
   Future<void> _normalizeTemplateOrder(

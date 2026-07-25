@@ -156,10 +156,28 @@ class _TemplateEditorScreenState extends ConsumerState<TemplateEditorScreen> {
     }
   }
 
-  Future<ExerciseSelection?> _pickExercise() {
-    return Navigator.of(context).push<ExerciseSelection>(
+  Future<List<ExerciseSelection>?> _pickExercises(
+    WorkoutTemplate template,
+  ) async {
+    final snapshot = await ref
+        .read(planningRepositoryProvider)
+        .getSnapshot(widget.userId);
+    final existing = snapshot.templateExercises
+        .where((entry) => entry.templateId == template.id && !entry.isDeleted)
+        .map(
+          (entry) => entry.customExerciseId != null
+              ? 'custom:${entry.customExerciseId}'
+              : 'system:${entry.systemExerciseKey}',
+        )
+        .toSet();
+    if (!mounted) return null;
+    return Navigator.of(context).push<List<ExerciseSelection>>(
       MaterialPageRoute(
-        builder: (_) => ExercisePickerScreen(userId: widget.userId),
+        builder: (_) => ExercisePickerScreen(
+          userId: widget.userId,
+          multiSelect: true,
+          unavailableExerciseKeys: existing,
+        ),
       ),
     );
   }
@@ -167,25 +185,21 @@ class _TemplateEditorScreenState extends ConsumerState<TemplateEditorScreen> {
   Future<void> _addExercise() async {
     final template = _template;
     if (template == null || _entriesBusy) return;
-    final selection = await _pickExercise();
-    if (selection == null || !mounted) return;
-    final configuration = await TemplateExerciseEditorSheet.show(
-      context,
-      exerciseName: selection.name,
-    );
-    if (configuration == null || !mounted) return;
+    final selections = await _pickExercises(template);
+    if (selections == null || selections.isEmpty || !mounted) return;
 
-    await _runEntryMutation(
-      () => ref
-          .read(planningRepositoryProvider)
-          .addExerciseToTemplate(
-            userId: widget.userId,
-            templateId: template.id,
-            exercise: selection,
-            configuration: configuration,
-          ),
-      failurePrefix: 'Exercise could not be added',
-    );
+    await _runEntryMutation(() async {
+      for (final selection in selections) {
+        await ref
+            .read(planningRepositoryProvider)
+            .addExerciseToTemplate(
+              userId: widget.userId,
+              templateId: template.id,
+              exercise: selection,
+            );
+      }
+      return null;
+    }, failurePrefix: 'Exercise could not be added');
   }
 
   Future<void> _configureEntry(TemplateExercise entry) async {
@@ -208,7 +222,11 @@ class _TemplateEditorScreenState extends ConsumerState<TemplateEditorScreen> {
   }
 
   Future<void> _replaceEntry(TemplateExercise entry) async {
-    final replacement = await _pickExercise();
+    final replacement = await Navigator.of(context).push<ExerciseSelection>(
+      MaterialPageRoute(
+        builder: (_) => ExercisePickerScreen(userId: widget.userId),
+      ),
+    );
     if (replacement == null || !mounted) return;
     await _runEntryMutation(
       () => ref

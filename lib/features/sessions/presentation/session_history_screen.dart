@@ -6,6 +6,7 @@ import '../data/offline_first_session_repository.dart';
 import '../domain/workout_session_models.dart';
 import 'completed_workout_detail_screen.dart';
 import 'session_ui_widgets.dart';
+import 'workout_calendar.dart';
 
 class SessionHistoryScreen extends StatefulWidget {
   const SessionHistoryScreen({
@@ -18,6 +19,7 @@ class SessionHistoryScreen extends StatefulWidget {
     this.onStartWorkout,
     this.onLocalChangeQueued,
     this.embedded = false,
+    this.showCalendar = false,
   });
 
   final String userId;
@@ -28,6 +30,7 @@ class SessionHistoryScreen extends StatefulWidget {
   final VoidCallback? onStartWorkout;
   final VoidCallback? onLocalChangeQueued;
   final bool embedded;
+  final bool showCalendar;
 
   @override
   State<SessionHistoryScreen> createState() => _SessionHistoryScreenState();
@@ -36,11 +39,13 @@ class SessionHistoryScreen extends StatefulWidget {
 class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
   final _search = TextEditingController();
   late Stream<List<CompletedWorkoutSession>> _stream;
+  late bool _showCalendar;
 
   @override
   void initState() {
     super.initState();
     _stream = widget.repository.watchCompletedSessions(widget.userId);
+    _showCalendar = widget.showCalendar;
     _search.addListener(_changed);
   }
 
@@ -50,6 +55,9 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
     if (oldWidget.userId != widget.userId ||
         oldWidget.repository != widget.repository) {
       _stream = widget.repository.watchCompletedSessions(widget.userId);
+    }
+    if (widget.showCalendar && !oldWidget.showCalendar) {
+      _showCalendar = true;
     }
   }
 
@@ -96,21 +104,44 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
             ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-            child: TextField(
-              key: const ValueKey('session-history-search'),
-              controller: _search,
-              textInputAction: TextInputAction.search,
-              decoration: InputDecoration(
-                hintText: 'Search completed workouts',
-                prefixIcon: const Icon(Icons.search_rounded),
-                suffixIcon: _search.text.isEmpty
-                    ? null
-                    : IconButton(
-                        tooltip: 'Clear search',
-                        onPressed: _search.clear,
-                        icon: const Icon(Icons.close_rounded),
-                      ),
-              ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _showCalendar
+                      ? const Text(
+                          'Completed workouts by local calendar date',
+                          style: TextStyle(color: Color(0xFF9099A5)),
+                        )
+                      : TextField(
+                          key: const ValueKey('session-history-search'),
+                          controller: _search,
+                          textInputAction: TextInputAction.search,
+                          decoration: InputDecoration(
+                            hintText: 'Search completed workouts',
+                            prefixIcon: const Icon(Icons.search_rounded),
+                            suffixIcon: _search.text.isEmpty
+                                ? null
+                                : IconButton(
+                                    tooltip: 'Clear search',
+                                    onPressed: _search.clear,
+                                    icon: const Icon(Icons.close_rounded),
+                                  ),
+                          ),
+                        ),
+                ),
+                const SizedBox(width: 8),
+                IconButton.filledTonal(
+                  key: const ValueKey('session-history-calendar-toggle'),
+                  tooltip: _showCalendar ? 'Show list' : 'Show calendar',
+                  onPressed: () =>
+                      setState(() => _showCalendar = !_showCalendar),
+                  icon: Icon(
+                    _showCalendar
+                        ? Icons.list_rounded
+                        : Icons.calendar_month_rounded,
+                  ),
+                ),
+              ],
             ),
           ),
           Expanded(
@@ -129,7 +160,14 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                     label: 'Loading completed workouts…',
                   );
                 }
-                return _buildHistory(snapshot.data ?? const []);
+                final sessions =
+                    snapshot.data ?? const <CompletedWorkoutSession>[];
+                return _showCalendar
+                    ? WorkoutCalendar(
+                        sessions: sessions,
+                        onOpenSession: _openSession,
+                      )
+                    : _buildHistory(sessions);
               },
             ),
           ),
@@ -185,17 +223,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
               ? _CompletedSessionCard(
                   session: item.session!,
                   weightUnit: widget.weightUnit,
-                  onTap: () => Navigator.of(context).push<bool>(
-                    MaterialPageRoute(
-                      builder: (_) => CompletedWorkoutDetailScreen(
-                        userId: widget.userId,
-                        weightUnit: widget.weightUnit,
-                        repository: widget.repository,
-                        sessionId: item.session!.id,
-                        onLocalChangeQueued: widget.onLocalChangeQueued,
-                      ),
-                    ),
-                  ),
+                  onTap: () => _openSession(item.session!),
                 )
               : _LegacyQuickLogCard(
                   workout: item.legacy!,
@@ -205,6 +233,20 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                       : () => widget.onOpenLegacyQuickLog!(item.legacy!),
                 );
         },
+      ),
+    );
+  }
+
+  void _openSession(CompletedWorkoutSession session) {
+    Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => CompletedWorkoutDetailScreen(
+          userId: widget.userId,
+          weightUnit: widget.weightUnit,
+          repository: widget.repository,
+          sessionId: session.id,
+          onLocalChangeQueued: widget.onLocalChangeQueued,
+        ),
       ),
     );
   }

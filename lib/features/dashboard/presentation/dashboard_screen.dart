@@ -18,6 +18,7 @@ class DashboardScreen extends ConsumerWidget {
     required this.onQuickLog,
     required this.onShowTemplates,
     required this.onShowHistory,
+    required this.onShowCalendar,
     required this.onShowPersonalRecords,
   });
 
@@ -29,6 +30,7 @@ class DashboardScreen extends ConsumerWidget {
   final VoidCallback onQuickLog;
   final VoidCallback onShowTemplates;
   final VoidCallback onShowHistory;
+  final VoidCallback onShowCalendar;
   final VoidCallback onShowPersonalRecords;
 
   @override
@@ -136,7 +138,10 @@ class DashboardScreen extends ConsumerWidget {
                       completedWorkoutSessionsProvider(userId),
                     ),
                   ),
-                  data: (items) => _WorkoutSummary(sessions: items),
+                  data: (items) => _WorkoutSummary(
+                    sessions: items,
+                    onShowCalendar: onShowCalendar,
+                  ),
                 ),
                 const SizedBox(height: 28),
                 Row(
@@ -599,9 +604,10 @@ class LocalDayBounds {
 }
 
 class _WorkoutSummary extends StatelessWidget {
-  const _WorkoutSummary({required this.sessions});
+  const _WorkoutSummary({required this.sessions, required this.onShowCalendar});
 
   final List<CompletedWorkoutSession> sessions;
+  final VoidCallback onShowCalendar;
 
   @override
   Widget build(BuildContext context) {
@@ -619,10 +625,12 @@ class _WorkoutSummary extends StatelessWidget {
         const SizedBox(width: 12),
         Expanded(
           child: _MetricCard(
+            key: const ValueKey('home-all-time-calendar'),
             icon: Icons.repeat_rounded,
             label: 'ALL TIME',
             value: '${statistics.allTimeCount}',
             detail: statistics.allTimeCount == 1 ? 'workout' : 'workouts',
+            onTap: onShowCalendar,
           ),
         ),
       ],
@@ -632,53 +640,60 @@ class _WorkoutSummary extends StatelessWidget {
 
 class _MetricCard extends StatelessWidget {
   const _MetricCard({
+    super.key,
     required this.icon,
     required this.label,
     required this.value,
     required this.detail,
+    this.onTap,
   });
 
   final IconData icon;
   final String label;
   final String value;
   final String detail;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  icon,
-                  size: 18,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  label,
-                  style: const TextStyle(
-                    color: Color(0xFF8E98A4),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.8,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    icon,
+                    size: 18,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
+                  const SizedBox(width: 8),
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      color: Color(0xFF8E98A4),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Text(
+                value,
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w900,
                 ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Text(
-              value,
-              style: Theme.of(
-                context,
-              ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w900),
-            ),
-            Text(detail, style: const TextStyle(color: Color(0xFF929CA8))),
-          ],
+              ),
+              Text(detail, style: const TextStyle(color: Color(0xFF929CA8))),
+            ],
+          ),
         ),
       ),
     );

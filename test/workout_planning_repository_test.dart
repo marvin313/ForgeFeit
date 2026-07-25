@@ -29,6 +29,28 @@ void main() {
     await database.close();
   });
 
+  test('prevents duplicate exercise selections inside one template', () async {
+    final template = await repository.createTemplate(
+      userId: _userA,
+      name: 'Upper A',
+    );
+    final bench = SystemExerciseCatalog.byKey('barbell_bench_press')!;
+    await repository.addExerciseToTemplate(
+      userId: _userA,
+      templateId: template.id,
+      exercise: bench,
+    );
+
+    expect(
+      () => repository.addExerciseToTemplate(
+        userId: _userA,
+        templateId: template.id,
+        exercise: bench,
+      ),
+      throwsA(isA<StateError>()),
+    );
+  });
+
   test(
     'creates, edits, and reorders splits and freely moves templates',
     () async {

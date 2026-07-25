@@ -630,6 +630,9 @@ class OfflineFirstSessionRepository {
   }) async {
     final current = await _requireActiveSet(userId, setId);
     if (current.isCompleted) return current;
+    if (!_isSetReadyForCompletion(current)) {
+      throw StateError('Enter at least one set value before completing it.');
+    }
     _validateSetValues(
       weightKg: current.weightKg,
       repetitions: current.repetitions,
@@ -642,10 +645,6 @@ class OfflineFirstSessionRepository {
       current.userId,
       current.sessionId,
     );
-    final exercise = await _requireActiveExercise(
-      current.userId,
-      current.sessionExerciseId,
-    );
     final now = _now();
     final updated = _copyActiveSet(
       current,
@@ -657,26 +656,9 @@ class OfflineFirstSessionRepository {
     await _database.transaction(() async {
       await _upsertActiveSet(updated);
       await _enqueueEntity(updated, SessionEntityType.activeSet, now);
-      if (startAutomaticRestTimer &&
-          session.autoStartRestTimer &&
-          exercise.restSeconds > 0) {
-        await _saveActiveSession(
-          _copyActiveSession(
-            session,
-            restTimerState: RestTimerState.running,
-            restTimerDurationSeconds: exercise.restSeconds,
-            restTimerRemainingSeconds: exercise.restSeconds,
-            restTimerTargetEndAt: now.add(
-              Duration(seconds: exercise.restSeconds),
-            ),
-            updatedAt: now,
-            version: session.version + 1,
-          ),
-          now,
-        );
-      } else {
-        await _touchActiveSession(session, now);
-      }
+      // Rest-timer fields remain stored for backwards-compatible session
+      // recovery, but completing a set no longer starts a timer.
+      await _touchActiveSession(session, now);
     });
     return updated;
   }
@@ -701,6 +683,46 @@ class OfflineFirstSessionRepository {
       await _touchSessionById(updated.userId, updated.sessionId, now);
     });
     return updated;
+  }
+
+  Future<void> toggleAllSetsCompleted({
+    required String userId,
+    required String exerciseId,
+  }) async {
+    final exercise = await _requireActiveExercise(userId, exerciseId);
+    final rows =
+        await (_database.select(_database.activeWorkoutSets)..where(
+              (row) =>
+                  row.sessionExerciseId.equals(exercise.id) &
+                  row.deletedAt.isNull(),
+            ))
+            .get();
+    final sets = rows.map(_activeSetFromRow).toList(growable: false);
+    if (sets.isEmpty) return;
+    final completable = sets
+        .where(_isSetReadyForCompletion)
+        .toList(growable: false);
+    final allCompleted =
+        completable.isNotEmpty && completable.every((set) => set.isCompleted);
+    final now = _now();
+    await _database.transaction(() async {
+      for (final current in sets) {
+        if (!allCompleted && !_isSetReadyForCompletion(current)) continue;
+        final shouldComplete = !allCompleted;
+        if (current.isCompleted == shouldComplete) continue;
+        final updated = _copyActiveSet(
+          current,
+          isCompleted: shouldComplete,
+          clearCompletedAt: !shouldComplete,
+          completedAt: shouldComplete ? now : current.completedAt,
+          updatedAt: now,
+          version: current.version + 1,
+        );
+        await _upsertActiveSet(updated);
+        await _enqueueEntity(updated, SessionEntityType.activeSet, now);
+      }
+      await _touchSessionById(exercise.userId, exercise.sessionId, now);
+    });
   }
 
   Future<ActiveWorkoutSession> editActiveWorkout({
@@ -3415,6 +3437,12 @@ class OfflineFirstSessionRepository {
       throw ArgumentError.value(rir, 'rir');
     }
   }
+
+  bool _isSetReadyForCompletion(ActiveWorkoutSet value) =>
+      value.weightKg != null ||
+      value.repetitions != null ||
+      value.durationSeconds != null ||
+      value.distanceMeters != null;
 
   String _requiredId(String value, String name) {
     final trimmed = value.trim();

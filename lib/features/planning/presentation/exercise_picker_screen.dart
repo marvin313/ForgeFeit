@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,10 +19,14 @@ class ExercisePickerScreen extends ConsumerStatefulWidget {
     super.key,
     required this.userId,
     this.selectionMode = true,
+    this.multiSelect = false,
+    this.unavailableExerciseKeys = const <String>{},
   });
 
   final String userId;
   final bool selectionMode;
+  final bool multiSelect;
+  final Set<String> unavailableExerciseKeys;
 
   @override
   ConsumerState<ExercisePickerScreen> createState() =>
@@ -35,6 +40,11 @@ class _ExercisePickerScreenState extends ConsumerState<ExercisePickerScreen> {
   MuscleGroup? _muscle;
   ExerciseEquipment? _equipment;
   final Set<String> _busyCustomIds = {};
+  final LinkedHashMap<String, ExerciseSelection> _selected =
+      LinkedHashMap<String, ExerciseSelection>();
+
+  String _selectionKey(ExerciseSelection selection) =>
+      '${selection.source.name}:${selection.exerciseId}';
 
   @override
   void initState() {
@@ -204,7 +214,11 @@ class _ExercisePickerScreenState extends ConsumerState<ExercisePickerScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          widget.selectionMode ? 'Choose exercise' : 'Exercise library',
+          widget.selectionMode
+              ? widget.multiSelect
+                    ? 'Choose exercises'
+                    : 'Choose exercise'
+              : 'Exercise library',
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -346,7 +360,12 @@ class _ExercisePickerScreenState extends ConsumerState<ExercisePickerScreen> {
                       );
                     }
                     return ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 2, 16, 96),
+                      padding: EdgeInsets.fromLTRB(
+                        16,
+                        2,
+                        16,
+                        widget.multiSelect ? 112 : 96,
+                      ),
                       itemCount: items.length,
                       separatorBuilder: (_, _) => const SizedBox(height: 9),
                       itemBuilder: (context, index) =>
@@ -356,6 +375,29 @@ class _ExercisePickerScreenState extends ConsumerState<ExercisePickerScreen> {
                 ),
               ),
             ),
+            if (widget.multiSelect)
+              SafeArea(
+                top: false,
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+                  decoration: const BoxDecoration(
+                    color: ForgeFitColors.background,
+                    border: Border(top: BorderSide(color: Color(0xFF242A32))),
+                  ),
+                  child: FilledButton.icon(
+                    key: const ValueKey('add-selected-exercises-button'),
+                    onPressed: _selected.isEmpty
+                        ? null
+                        : () => Navigator.of(context).pop(
+                            List<ExerciseSelection>.unmodifiable(
+                              _selected.values,
+                            ),
+                          ),
+                    icon: const Icon(Icons.add_task_rounded),
+                    label: Text('Add selected (${_selected.length})'),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -365,11 +407,22 @@ class _ExercisePickerScreenState extends ConsumerState<ExercisePickerScreen> {
   Widget _exerciseTile(_PickerItem item) {
     final selection = item.selection;
     final custom = item.custom;
+    final selectionKey = _selectionKey(selection);
+    final unavailable = widget.unavailableExerciseKeys.contains(selectionKey);
+    final selected = _selected.containsKey(selectionKey);
     return Card(
       child: ListTile(
         contentPadding: const EdgeInsets.fromLTRB(14, 7, 8, 7),
-        onTap: widget.selectionMode
-            ? () => Navigator.of(context).pop(selection)
+        onTap: widget.selectionMode && !unavailable
+            ? widget.multiSelect
+                  ? () => setState(() {
+                      if (selected) {
+                        _selected.remove(selectionKey);
+                      } else {
+                        _selected[selectionKey] = selection;
+                      }
+                    })
+                  : () => Navigator.of(context).pop(selection)
             : custom == null
             ? null
             : () => _editCustomExercise(custom),
@@ -402,9 +455,24 @@ class _ExercisePickerScreenState extends ConsumerState<ExercisePickerScreen> {
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
         ),
-        trailing: custom == null
+        trailing: widget.multiSelect
+            ? Checkbox.adaptive(
+                value: selected,
+                onChanged: unavailable
+                    ? null
+                    : (_) => setState(() {
+                        if (selected) {
+                          _selected.remove(selectionKey);
+                        } else {
+                          _selected[selectionKey] = selection;
+                        }
+                      }),
+              )
+            : custom == null
             ? Icon(
-                widget.selectionMode
+                unavailable
+                    ? Icons.check_circle_outline_rounded
+                    : widget.selectionMode
                     ? Icons.chevron_right_rounded
                     : Icons.lock_outline_rounded,
               )
