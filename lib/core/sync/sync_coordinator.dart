@@ -288,6 +288,14 @@ class SyncCoordinator {
             _emit(SyncStatus.syncing(pending));
           }
         }
+        // A stale queue row remains durable for retry and support diagnosis,
+        // but must not block unrelated template exercise mutations. Surface a
+        // safe operation-level reason instead of the former generic failure.
+        final preparationError = await planningRepository
+            .pendingPreparationError(userId);
+        if (preparationError != null && deferredFailure == null) {
+          deferredFailure = readableSyncError(StateError(preparationError));
+        }
       }
 
       final sessionRepository = _sessionRepository;
@@ -419,6 +427,9 @@ class SyncCoordinator {
 /// session details, or server payloads in the app interface.
 String readableSyncError(Object error) {
   final message = error.toString().toLowerCase();
+  if (message.contains('planning sync could not prepare a queued change')) {
+    return 'A queued planning change could not be prepared. Other template changes will continue syncing; retry after updating the app.';
+  }
   if (message.contains('pgrst205') ||
       message.contains('could not find the table') ||
       message.contains('schema cache')) {

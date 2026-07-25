@@ -1276,53 +1276,76 @@ class OfflineFirstPlanningRepository {
 
     final result = <PendingPlanningUpload>[];
     for (final queue in sortedRows) {
-      final type = planningEntityTypeFromWire(queue.entityType);
-      final entity = await _loadEntity(owner, type, queue.entityId);
-      final entityVersion = _entityVersion(entity);
-      if (entityVersion != queue.entityVersion) {
-        // This can only happen after an interrupted transaction from a much
-        // older app version. Repair the outbox before exposing the upload.
-        final now = _now();
-        final repaired =
-            await (_database.update(_database.plannerSyncQueue)..where(
-                  (row) =>
-                      row.id.equals(queue.id) &
-                      row.entityVersion.equals(queue.entityVersion),
-                ))
-                .write(
-                  PlannerSyncQueueCompanion(
-                    entityVersion: Value(entityVersion),
-                    attemptCount: const Value(0),
-                    lastError: const Value(null),
-                    lastAttemptAt: const Value(null),
-                    updatedAt: Value(now),
-                  ),
-                );
-        if (repaired == 0) {
-          // A concurrent edit advanced this queue row after it was read.
-          // Skip the stale snapshot; the coordinator will see the still-
-          // pending row and run another pass.
-          continue;
+      try {
+        final type = planningEntityTypeFromWire(queue.entityType);
+        final entity = await _loadEntity(owner, type, queue.entityId);
+        final entityVersion = _entityVersion(entity);
+        if (entityVersion != queue.entityVersion) {
+          // This can only happen after an interrupted transaction from a much
+          // older app version. Repair the outbox before exposing the upload.
+          final now = _now();
+          final repaired =
+              await (_database.update(_database.plannerSyncQueue)..where(
+                    (row) =>
+                        row.id.equals(queue.id) &
+                        row.entityVersion.equals(queue.entityVersion),
+                  ))
+                  .write(
+                    PlannerSyncQueueCompanion(
+                      entityVersion: Value(entityVersion),
+                      attemptCount: const Value(0),
+                      lastError: const Value(null),
+                      lastAttemptAt: const Value(null),
+                      updatedAt: Value(now),
+                    ),
+                  );
+          if (repaired == 0) {
+            // A concurrent edit advanced this queue row after it was read.
+            // Skip the stale snapshot; the coordinator will see the still-
+            // pending row and run another pass.
+            continue;
+          }
         }
+        result.add(
+          PendingPlanningUpload(
+            queueId: queue.id,
+            userId: owner,
+            entityType: type,
+            entityId: queue.entityId,
+            entityVersion: entityVersion,
+            entity: entity,
+            attemptCount: entityVersion == queue.entityVersion
+                ? queue.attemptCount
+                : 0,
+            lastError: entityVersion == queue.entityVersion
+                ? queue.lastError
+                : null,
+          ),
+        );
+      } on Object catch (error) {
+        // A stale or malformed outbox row must remain durable for diagnosis,
+        // but it must not prevent unrelated template exercise mutations from
+        // reaching the cloud in this same pass.
+        await _recordPreparationFailure(queue, error);
       }
-      result.add(
-        PendingPlanningUpload(
-          queueId: queue.id,
-          userId: owner,
-          entityType: type,
-          entityId: queue.entityId,
-          entityVersion: entityVersion,
-          entity: entity,
-          attemptCount: entityVersion == queue.entityVersion
-              ? queue.attemptCount
-              : 0,
-          lastError: entityVersion == queue.entityVersion
-              ? queue.lastError
-              : null,
-        ),
-      );
     }
     return List.unmodifiable(result);
+  }
+
+  /// Returns the safe reason a queued record could not be materialized for
+  /// upload. The record stays in SQLite; valid planning changes still upload.
+  Future<String?> pendingPreparationError(String userId) async {
+    final owner = _validatedId(userId, 'userId');
+    final rows =
+        await (_database.select(_database.plannerSyncQueue)
+              ..where(
+                (row) =>
+                    row.userId.equals(owner) &
+                    row.lastError.like('$_preparationErrorPrefix%'),
+              )
+              ..orderBy([(row) => OrderingTerm.asc(row.createdAt)]))
+            .get();
+    return rows.isEmpty ? null : rows.first.lastError;
   }
 
   Future<void> upload(PendingPlanningUpload pending) async {
@@ -1419,6 +1442,29 @@ class OfflineFirstPlanningRepository {
           PlannerSyncQueueCompanion(
             attemptCount: Value(row.attemptCount + 1),
             lastError: Value(_boundedError(error)),
+            lastAttemptAt: Value(now),
+            updatedAt: Value(now),
+          ),
+        );
+  }
+
+  Future<void> _recordPreparationFailure(
+    PlannerSyncQueueRow queue,
+    Object error,
+  ) {
+    final message = _boundedError(
+      '$_preparationErrorPrefix ${error.runtimeType}.',
+    );
+    final now = _now();
+    return (_database.update(_database.plannerSyncQueue)..where(
+          (row) =>
+              row.id.equals(queue.id) &
+              row.entityVersion.equals(queue.entityVersion),
+        ))
+        .write(
+          PlannerSyncQueueCompanion(
+            attemptCount: Value(queue.attemptCount + 1),
+            lastError: Value(message),
             lastAttemptAt: Value(now),
             updatedAt: Value(now),
           ),
@@ -2490,6 +2536,9 @@ String _boundedError(String error) {
   final value = normalized.isEmpty ? 'Planning sync failed.' : normalized;
   return value.length <= 1000 ? value : value.substring(0, 1000);
 }
+
+const _preparationErrorPrefix =
+    'Planning sync could not prepare a queued change:';
 
 final RegExp _uuidPattern = RegExp(
   r'^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',

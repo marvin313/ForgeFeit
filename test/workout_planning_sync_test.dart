@@ -158,6 +158,239 @@ void main() {
   );
 
   test(
+    'template exercise mutations use the durable outbox through upload, retry, reorder, and tombstone',
+    () async {
+      final database = AppDatabase(NativeDatabase.memory());
+      addTearDown(database.close);
+      final remote = _RetryingPlanningRemote();
+      final planningRepository = OfflineFirstPlanningRepository(
+        database: database,
+        remote: remote,
+        idGenerator: _UuidSequence(6000).next,
+        clock: _TestClock().now,
+      );
+      final coordinator = SyncCoordinator(
+        repository: OfflineFirstWorkoutRepository(
+          database: database,
+          remote: _FakeWorkoutRemote(),
+          idGenerator: _UuidSequence(7000).next,
+        ),
+        planningRepository: planningRepository,
+        connectivityChanges: const Stream.empty(),
+      );
+      addTearDown(coordinator.dispose);
+
+      final split = await planningRepository.createSplit(
+        userId: _userA,
+        name: 'Cloud planning',
+      );
+      final template = await planningRepository.createTemplate(
+        userId: _userA,
+        splitId: split.id,
+        name: 'Full template upload',
+      );
+      final custom = await planningRepository.createCustomExercise(
+        userId: _userA,
+        name: 'Private rotation',
+        primaryMuscleGroup: MuscleGroup.core,
+        equipment: ExerciseEquipment.cable,
+      );
+      final bench = await planningRepository.addExerciseToTemplate(
+        userId: _userA,
+        templateId: template.id,
+        exercise: SystemExerciseCatalog.byKey('barbell_bench_press')!,
+        configuration: const TemplateExerciseConfiguration(
+          workingSets: 5,
+          warmupSets: 2,
+          targetRepsMin: 3,
+          targetRepsMax: 5,
+          targetWeight: 102.5,
+          restSeconds: 180,
+          notes: 'Pause the first rep',
+        ),
+      );
+      final incline = await planningRepository.addExerciseToTemplate(
+        userId: _userA,
+        templateId: template.id,
+        exercise: SystemExerciseCatalog.byKey('incline_barbell_bench_press')!,
+        configuration: const TemplateExerciseConfiguration(
+          workingSets: 3,
+          targetRepsMin: 8,
+          targetRepsMax: 10,
+          targetWeight: 70,
+          restSeconds: 120,
+          rpeTarget: 8,
+        ),
+      );
+      final fly = await planningRepository.addExerciseToTemplate(
+        userId: _userA,
+        templateId: template.id,
+        exercise: SystemExerciseCatalog.byKey('cable_fly')!,
+        configuration: const TemplateExerciseConfiguration(
+          workingSets: 2,
+          targetRepsMin: 12,
+          targetRepsMax: 15,
+          restSeconds: 60,
+        ),
+      );
+      final rotation = await planningRepository.addExerciseToTemplate(
+        userId: _userA,
+        templateId: template.id,
+        exercise: custom.selection,
+        configuration: const TemplateExerciseConfiguration(
+          workingSets: 4,
+          targetRepsMin: 10,
+          targetRepsMax: 15,
+          targetWeight: 22.5,
+          restSeconds: 75,
+          rirTarget: 2,
+          notes: 'Control the return',
+        ),
+      );
+
+      final beforeSync = await planningRepository.pendingUploads(_userA);
+      expect(
+        beforeSync
+            .where(
+              (upload) =>
+                  upload.entityType == PlanningEntityType.templateExercise,
+            )
+            .map((upload) => upload.entityId),
+        containsAll([bench.id, incline.id, fly.id, rotation.id]),
+      );
+      expect(
+        (await planningRepository.getSnapshot(_userA)).templateExercises,
+        hasLength(4),
+      );
+
+      remote.failNextTemplateExerciseUpsert = true;
+      await coordinator.sync(_userA);
+      expect(remote.templateExerciseUpsertCalls, 1);
+      expect(await planningRepository.pendingCount(_userA), greaterThan(0));
+      final failed = await planningRepository.pendingUploads(_userA);
+      final retry = failed.singleWhere((upload) => upload.entityId == bench.id);
+      expect(retry.entityId, bench.id);
+      expect(retry.entityVersion, 1);
+
+      await coordinator.sync(_userA);
+      expect(await planningRepository.pendingCount(_userA), 0);
+      expect(remote.templateExercises, hasLength(4));
+      expect(remote.templateExercises[bench.id]!.targetWeight, 102.5);
+      expect(
+        remote.templateExercises[rotation.id]!.customExerciseId,
+        custom.id,
+      );
+
+      final updatedBench = await planningRepository.updateTemplateExercise(
+        userId: _userA,
+        templateExerciseId: bench.id,
+        configuration: const TemplateExerciseConfiguration(
+          workingSets: 4,
+          warmupSets: 1,
+          targetRepsMin: 6,
+          targetRepsMax: 8,
+          targetWeight: 92.5,
+          restSeconds: 150,
+          rpeTarget: 8.5,
+          notes: 'Updated target',
+        ),
+      );
+      await planningRepository.reorderTemplateExercises(
+        userId: _userA,
+        templateId: template.id,
+        orderedTemplateExerciseIds: [rotation.id, fly.id, incline.id, bench.id],
+      );
+      await planningRepository.removeTemplateExercise(
+        userId: _userA,
+        templateExerciseId: fly.id,
+      );
+      await coordinator.sync(_userA);
+
+      expect(await planningRepository.pendingCount(_userA), 0);
+      expect(remote.templateExercises, hasLength(4));
+      expect(
+        remote.templateExercises[bench.id]!.version,
+        greaterThan(updatedBench.version),
+      );
+      expect(remote.templateExercises[bench.id]!.targetWeight, 92.5);
+      expect(remote.templateExercises[bench.id]!.notes, 'Updated target');
+      expect(remote.templateExercises[fly.id]!.deletedAt, isNotNull);
+      expect(
+        remote.templateExercises.values
+            .where((entry) => entry.deletedAt == null)
+            .toList()
+          ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder)),
+        hasLength(3),
+      );
+      expect(remote.templateExercises[rotation.id]!.sortOrder, 0);
+      expect(remote.templateExercises[incline.id]!.sortOrder, 1);
+      expect(remote.templateExercises[bench.id]!.sortOrder, 2);
+    },
+  );
+
+  test(
+    'an orphaned planning queue row does not block template exercise upload',
+    () async {
+      final database = AppDatabase(NativeDatabase.memory());
+      addTearDown(database.close);
+      final remote = _RetryingPlanningRemote();
+      final planningRepository = OfflineFirstPlanningRepository(
+        database: database,
+        remote: remote,
+        idGenerator: _UuidSequence(8000).next,
+        clock: _TestClock().now,
+      );
+      final coordinator = SyncCoordinator(
+        repository: OfflineFirstWorkoutRepository(
+          database: database,
+          remote: _FakeWorkoutRemote(),
+          idGenerator: _UuidSequence(9000).next,
+        ),
+        planningRepository: planningRepository,
+        connectivityChanges: const Stream.empty(),
+      );
+      addTearDown(coordinator.dispose);
+      final now = DateTime.utc(2026, 7, 24, 10);
+      await database
+          .into(database.plannerSyncQueue)
+          .insert(
+            PlannerSyncQueueCompanion.insert(
+              id: '30000000-0000-4000-8000-000000009001',
+              userId: _userA,
+              entityType: PlanningEntityType.templateExercise.wireValue,
+              entityId: '30000000-0000-4000-8000-000000009002',
+              entityVersion: 1,
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+      final template = await planningRepository.createTemplate(
+        userId: _userA,
+        name: 'Valid despite stale queue',
+      );
+      final entry = await planningRepository.addExerciseToTemplate(
+        userId: _userA,
+        templateId: template.id,
+        exercise: SystemExerciseCatalog.byKey('barbell_bench_press')!,
+      );
+
+      await coordinator.sync(_userA);
+
+      expect(remote.templateExercises[entry.id]?.templateId, template.id);
+      expect(await planningRepository.pendingCount(_userA), 1);
+      expect(
+        await planningRepository.pendingPreparationError(_userA),
+        contains('Planning sync could not prepare a queued change'),
+      );
+      expect(coordinator.currentStatus.state, SyncState.syncFailed);
+      expect(
+        coordinator.currentStatus.errorMessage,
+        contains('queued planning'),
+      );
+    },
+  );
+
+  test(
     'restore rebuilds a fresh database, is idempotent, and remains user isolated',
     () async {
       final remote = _RetryingPlanningRemote();
@@ -191,7 +424,47 @@ void main() {
         splitId: split.id,
         name: 'Restorable day',
       );
-      final entry = await sourceRepository.addExerciseToTemplate(
+      final benchEntry = await sourceRepository.addExerciseToTemplate(
+        userId: _userA,
+        templateId: template.id,
+        exercise: SystemExerciseCatalog.byKey('barbell_bench_press')!,
+        configuration: const TemplateExerciseConfiguration(
+          workingSets: 5,
+          warmupSets: 2,
+          targetRepsMin: 3,
+          targetRepsMax: 5,
+          targetWeight: 102.5,
+          restSeconds: 180,
+          rpeTarget: 8.5,
+          notes: 'Pause every first rep',
+        ),
+      );
+      final inclineEntry = await sourceRepository.addExerciseToTemplate(
+        userId: _userA,
+        templateId: template.id,
+        exercise: SystemExerciseCatalog.byKey('incline_barbell_bench_press')!,
+        configuration: const TemplateExerciseConfiguration(
+          workingSets: 3,
+          targetRepsMin: 8,
+          targetRepsMax: 10,
+          targetWeight: 70,
+          restSeconds: 120,
+          rirTarget: 2,
+        ),
+      );
+      final flyEntry = await sourceRepository.addExerciseToTemplate(
+        userId: _userA,
+        templateId: template.id,
+        exercise: SystemExerciseCatalog.byKey('cable_fly')!,
+        configuration: const TemplateExerciseConfiguration(
+          workingSets: 2,
+          targetRepsMin: 12,
+          targetRepsMax: 15,
+          restSeconds: 60,
+          notes: 'Keep tension at the stretch',
+        ),
+      );
+      final customEntry = await sourceRepository.addExerciseToTemplate(
         userId: _userA,
         templateId: template.id,
         exercise: custom.selection,
@@ -208,6 +481,12 @@ void main() {
         ),
       );
       await _flush(sourceRepository, _userA);
+      expect(remote.templateExercises.keys, {
+        benchEntry.id,
+        inclineEntry.id,
+        flyEntry.id,
+        customEntry.id,
+      });
       await sourceDatabase.close();
       sourceClosed = true;
 
@@ -248,9 +527,46 @@ void main() {
         ),
         isTrue,
       );
-      expect(restored.templateExercises.map((item) => item.id), [entry.id]);
-      expect(restored.templateExercises.single.workingSets, 4);
-      expect(restored.templateExercises.single.targetWeight, 22.5);
+      expect(restored.templateExercises.map((item) => item.id), [
+        benchEntry.id,
+        inclineEntry.id,
+        flyEntry.id,
+        customEntry.id,
+      ]);
+      expect(restored.templateExercises.map((item) => item.systemExerciseKey), [
+        'barbell_bench_press',
+        'incline_barbell_bench_press',
+        'cable_fly',
+        null,
+      ]);
+      expect(restored.templateExercises.map((item) => item.customExerciseId), [
+        null,
+        null,
+        null,
+        custom.id,
+      ]);
+      expect(restored.templateExercises.map((item) => item.sortOrder), [
+        0,
+        1,
+        2,
+        3,
+      ]);
+      expect(restored.templateExercises[0].configuration.workingSets, 5);
+      expect(restored.templateExercises[0].configuration.warmupSets, 2);
+      expect(restored.templateExercises[0].configuration.targetWeight, 102.5);
+      expect(restored.templateExercises[0].configuration.rpeTarget, 8.5);
+      expect(restored.templateExercises[1].configuration.targetRepsMax, 10);
+      expect(restored.templateExercises[1].configuration.rirTarget, 2);
+      expect(
+        restored.templateExercises[2].configuration.notes,
+        'Keep tension at the stretch',
+      );
+      expect(restored.templateExercises[3].configuration.workingSets, 4);
+      expect(restored.templateExercises[3].configuration.targetWeight, 22.5);
+      expect(
+        restored.templateExercises[3].configuration.notes,
+        'Control the return',
+      );
       expect(await restoredRepository.pendingCount(_userA), 0);
       expect(
         restored.splits.map((item) => item.name),
@@ -370,7 +686,9 @@ Future<void> _flush(
 
 class _RetryingPlanningRemote extends StrictFakePlanningRemote {
   bool failAfterNextSplitUpsert = false;
+  bool failNextTemplateExerciseUpsert = false;
   int splitUpsertCalls = 0;
+  int templateExerciseUpsertCalls = 0;
   PlanningSnapshot? snapshotOverride;
 
   @override
@@ -382,6 +700,18 @@ class _RetryingPlanningRemote extends StrictFakePlanningRemote {
       throw StateError('Device is offline');
     }
     return accepted;
+  }
+
+  @override
+  Future<TemplateExercise> upsertTemplateExercise(
+    TemplateExercise exercise,
+  ) async {
+    templateExerciseUpsertCalls++;
+    if (failNextTemplateExerciseUpsert) {
+      failNextTemplateExerciseUpsert = false;
+      throw StateError('Template exercise upload is temporarily unavailable');
+    }
+    return super.upsertTemplateExercise(exercise);
   }
 
   @override
