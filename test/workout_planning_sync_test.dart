@@ -271,14 +271,25 @@ void main() {
         hasLength(4),
       );
 
-      remote.failNextTemplateExerciseUpsert = true;
+      remote.nextTemplateExerciseError = StateError(
+        'new row violates check constraint '
+        'template_exercises_primary_muscle_group_check',
+      );
       await coordinator.sync(_userA);
       expect(remote.templateExerciseUpsertCalls, 4);
       expect(await planningRepository.pendingCount(_userA), 1);
       expect(remote.templateExercises, hasLength(3));
       expect(
         coordinator.currentStatus.errorMessage,
-        contains('Template exercise upload failed'),
+        contains('Template exercise upsert failed'),
+      );
+      expect(
+        coordinator.currentStatus.errorMessage,
+        contains('barbell_bench_press'),
+      );
+      expect(
+        coordinator.currentStatus.errorMessage,
+        contains('Rejected field: primary muscle group'),
       );
       final failed = await planningRepository.pendingUploads(_userA);
       final retry = failed.singleWhere((upload) => upload.entityId == bench.id);
@@ -699,7 +710,7 @@ Future<void> _flush(
 
 class _RetryingPlanningRemote extends StrictFakePlanningRemote {
   bool failAfterNextSplitUpsert = false;
-  bool failNextTemplateExerciseUpsert = false;
+  Object? nextTemplateExerciseError;
   int splitUpsertCalls = 0;
   int templateExerciseUpsertCalls = 0;
   PlanningSnapshot? snapshotOverride;
@@ -720,9 +731,9 @@ class _RetryingPlanningRemote extends StrictFakePlanningRemote {
     TemplateExercise exercise,
   ) async {
     templateExerciseUpsertCalls++;
-    if (failNextTemplateExerciseUpsert) {
-      failNextTemplateExerciseUpsert = false;
-      throw StateError('Template exercise upload is temporarily unavailable');
+    if (nextTemplateExerciseError case final error?) {
+      nextTemplateExerciseError = null;
+      throw error;
     }
     return super.upsertTemplateExercise(exercise);
   }

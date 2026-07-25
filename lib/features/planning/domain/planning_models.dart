@@ -46,9 +46,16 @@ extension MuscleGroupPresentation on MuscleGroup {
 }
 
 MuscleGroup muscleGroupFromWire(String value) {
-  final normalized = value.trim().toLowerCase().replaceAll(' ', '_');
+  final normalized = _normalizePlanningWireValue(value);
+  final canonical = switch (normalized) {
+    'abs' => 'core',
+    'quads' => 'quadriceps',
+    'shoulder' => 'shoulders',
+    'fullbody' => 'full_body',
+    _ => normalized,
+  };
   return MuscleGroup.values.firstWhere(
-    (group) => group.wireValue == normalized,
+    (group) => group.wireValue == canonical,
     orElse: () => MuscleGroup.other,
   );
 }
@@ -98,11 +105,20 @@ extension ExerciseEquipmentPresentation on ExerciseEquipment {
 }
 
 ExerciseEquipment exerciseEquipmentFromWire(String value) {
-  final normalized = value.trim().toLowerCase().replaceAll(' ', '_');
+  final normalized = _normalizePlanningWireValue(value);
+  final canonical = switch (normalized) {
+    'selectorized_machine' => 'selectorised_machine',
+    'cardio' => 'cardio_equipment',
+    _ => normalized,
+  };
   return ExerciseEquipment.values.firstWhere(
-    (equipment) => equipment.wireValue == normalized,
+    (equipment) => equipment.wireValue == canonical,
     orElse: () => ExerciseEquipment.other,
   );
+}
+
+String _normalizePlanningWireValue(String value) {
+  return value.trim().toLowerCase().replaceAll(RegExp(r'[\s-]+'), '_');
 }
 
 enum ExerciseSource { system, custom }
