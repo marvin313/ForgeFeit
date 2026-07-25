@@ -76,6 +76,20 @@ class ProgressPoint {
   final String label;
 }
 
+class ExerciseWeightProgressSummary {
+  const ExerciseWeightProgressSummary({
+    required this.startingWeightKg,
+    required this.latestWeightKg,
+    required this.changeKg,
+    required this.changePercentage,
+  });
+
+  final double startingWeightKg;
+  final double latestWeightKg;
+  final double changeKg;
+  final double? changePercentage;
+}
+
 class ProgressSetRecord {
   const ProgressSetRecord({
     required this.value,
@@ -165,6 +179,7 @@ class ProgressCalculator {
     Iterable<CompletedWorkoutBundle> bundles,
   ) {
     final options = <String, ProgressExerciseOption>{};
+    final latest = <String, DateTime>{};
     for (final bundle in bundles) {
       if (bundle.session.isDeleted) continue;
       for (final exercise in bundle.exercises) {
@@ -176,10 +191,21 @@ class ProgressCalculator {
             name: exercise.exerciseName,
           ),
         );
+        final performedAt = bundle.session.endedAt.toUtc();
+        if (performedAt.isAfter(
+          latest[exercise.exerciseKey] ?? DateTime(1900),
+        )) {
+          latest[exercise.exerciseKey] = performedAt;
+        }
       }
     }
     final values = options.values.toList()
-      ..sort((a, b) => a.name.compareTo(b.name));
+      ..sort((a, b) {
+        final recent = (latest[b.key] ?? DateTime(1900)).compareTo(
+          latest[a.key] ?? DateTime(1900),
+        );
+        return recent == 0 ? a.name.compareTo(b.name) : recent;
+      });
     return List.unmodifiable(values);
   }
 
@@ -249,7 +275,7 @@ class ProgressCalculator {
     required String exerciseKey,
     required ExerciseProgressMetric metric,
   }) {
-    final points = <ProgressPoint>[];
+    final pointsByLocalDate = <DateTime, ProgressPoint>{};
     for (final bundle in bundles) {
       if (bundle.session.isDeleted) continue;
       final values = <double>[];
@@ -269,17 +295,50 @@ class ProgressCalculator {
         }
       }
       if (values.isNotEmpty) {
-        points.add(
-          ProgressPoint(
-            date: bundle.session.endedAt.toLocal(),
-            value: values.reduce(math.max),
-            label: bundle.session.name,
-          ),
+        final local = bundle.session.endedAt.toLocal();
+        final date = DateTime(local.year, local.month, local.day);
+        final point = ProgressPoint(
+          date: date,
+          value: values.reduce(math.max),
+          label: bundle.session.name,
         );
+        final existing = pointsByLocalDate[date];
+        if (existing == null || point.value > existing.value) {
+          pointsByLocalDate[date] = point;
+        }
       }
     }
+    final points = pointsByLocalDate.values.toList();
     points.sort((a, b) => a.date.compareTo(b.date));
     return List.unmodifiable(points);
+  }
+
+  /// The primary Progress chart: one highest valid lifted weight for each
+  /// local calendar date on which this stable exercise identity was performed.
+  static List<ProgressPoint> exerciseWeightProgress({
+    required Iterable<CompletedWorkoutBundle> bundles,
+    required String exerciseKey,
+  }) => exerciseProgress(
+    bundles: bundles,
+    exerciseKey: exerciseKey,
+    metric: ExerciseProgressMetric.bestWeight,
+  );
+
+  static ExerciseWeightProgressSummary? weightProgressSummary(
+    List<ProgressPoint> points,
+  ) {
+    if (points.isEmpty) return null;
+    final startingWeight = points.first.value;
+    final latestWeight = points.last.value;
+    final change = latestWeight - startingWeight;
+    return ExerciseWeightProgressSummary(
+      startingWeightKg: startingWeight,
+      latestWeightKg: latestWeight,
+      changeKg: change,
+      changePercentage: startingWeight > 0
+          ? change / startingWeight * 100
+          : null,
+    );
   }
 
   static List<ProgressPoint> trainingVolume({

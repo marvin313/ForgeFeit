@@ -24,7 +24,6 @@ class ProgressScreen extends ConsumerStatefulWidget {
 
 class _ProgressScreenState extends ConsumerState<ProgressScreen> {
   ProgressTimeRange _range = ProgressTimeRange.threeMonths;
-  ExerciseProgressMetric _metric = ExerciseProgressMetric.bestWeight;
   String? _exerciseKey;
 
   @override
@@ -43,8 +42,8 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
           title: const Text('Progress'),
           bottom: const TabBar(
             tabs: [
-              Tab(text: 'Overview'),
               Tab(text: 'Exercise'),
+              Tab(text: 'Overview'),
               Tab(text: 'Records'),
             ],
           ),
@@ -68,25 +67,23 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
             final records = ProgressCalculator.personalRecords(allBundles);
             return TabBarView(
               children: [
+                _ExerciseTab(
+                  range: _range,
+                  onRangeChanged: _setRange,
+                  options: options,
+                  selectedKey: selected,
+                  onExerciseChanged: (value) =>
+                      setState(() => _exerciseKey = value),
+                  bundles: filtered,
+                  records: records,
+                  weightUnit: widget.weightUnit,
+                ),
                 _OverviewTab(
                   range: _range,
                   onRangeChanged: _setRange,
                   bundles: filtered,
                   allBundles: allBundles,
                   splitNames: splitNames,
-                  weightUnit: widget.weightUnit,
-                ),
-                _ExerciseTab(
-                  range: _range,
-                  onRangeChanged: _setRange,
-                  options: options,
-                  selectedKey: selected,
-                  metric: _metric,
-                  onExerciseChanged: (value) =>
-                      setState(() => _exerciseKey = value),
-                  onMetricChanged: (value) => setState(() => _metric = value),
-                  bundles: filtered,
-                  records: records,
                   weightUnit: widget.weightUnit,
                 ),
                 _RecordsTab(records: records, weightUnit: widget.weightUnit),
@@ -217,9 +214,7 @@ class _ExerciseTab extends StatelessWidget {
     required this.onRangeChanged,
     required this.options,
     required this.selectedKey,
-    required this.metric,
     required this.onExerciseChanged,
-    required this.onMetricChanged,
     required this.bundles,
     required this.records,
     required this.weightUnit,
@@ -229,9 +224,7 @@ class _ExerciseTab extends StatelessWidget {
   final ValueChanged<ProgressTimeRange> onRangeChanged;
   final List<ProgressExerciseOption> options;
   final String? selectedKey;
-  final ExerciseProgressMetric metric;
   final ValueChanged<String?> onExerciseChanged;
-  final ValueChanged<ExerciseProgressMetric> onMetricChanged;
   final List<CompletedWorkoutBundle> bundles;
   final List<ExercisePersonalRecords> records;
   final String weightUnit;
@@ -249,10 +242,9 @@ class _ExerciseTab extends StatelessWidget {
         ],
       );
     }
-    final points = ProgressCalculator.exerciseProgress(
+    final points = ProgressCalculator.exerciseWeightProgress(
       bundles: bundles,
       exerciseKey: selectedKey!,
-      metric: metric,
     );
     final record = records
         .where((entry) => entry.exerciseKey == selectedKey)
@@ -273,22 +265,11 @@ class _ExerciseTab extends StatelessWidget {
               .toList(growable: false),
           onChanged: onExerciseChanged,
         ),
-        const SizedBox(height: 16),
-        SegmentedButton<ExerciseProgressMetric>(
-          segments: ExerciseProgressMetric.values
-              .map(
-                (value) => ButtonSegment(
-                  value: value,
-                  label: Text(value.label, overflow: TextOverflow.ellipsis),
-                ),
-              )
-              .toList(growable: false),
-          selected: {metric},
-          onSelectionChanged: (values) => onMetricChanged(values.single),
-        ),
         const SizedBox(height: 24),
-        _SectionTitle(metric.label),
-        _ProgressLineChart(points: points, unit: weightUnit),
+        const _SectionTitle('Weight progress'),
+        _WeightProgressSummary(points: points, unit: 'kg'),
+        const SizedBox(height: 16),
+        _ProgressLineChart(points: points, unit: 'kg'),
         const SizedBox(height: 24),
         _RecordSummary(record: record, weightUnit: weightUnit),
       ],
@@ -616,6 +597,71 @@ class _RecordSummary extends StatelessWidget {
   }
 }
 
+class _WeightProgressSummary extends StatelessWidget {
+  const _WeightProgressSummary({required this.points, required this.unit});
+
+  final List<ProgressPoint> points;
+  final String unit;
+
+  @override
+  Widget build(BuildContext context) {
+    final summary = ProgressCalculator.weightProgressSummary(points);
+    if (summary == null) return const SizedBox.shrink();
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: ForgeFitColors.surface,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Wrap(
+          spacing: 18,
+          runSpacing: 8,
+          children: [
+            _SummaryValue(
+              'Start',
+              _formatMetric(summary.startingWeightKg, unit),
+            ),
+            _SummaryValue(
+              'Latest',
+              _formatMetric(summary.latestWeightKg, unit),
+            ),
+            _SummaryValue('Change', _signedMetric(summary.changeKg, unit)),
+            if (summary.changePercentage != null)
+              _SummaryValue(
+                'Progress',
+                '${_signed(summary.changePercentage!)}%',
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SummaryValue extends StatelessWidget {
+  const _SummaryValue(this.label, this.value);
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Text(label, style: Theme.of(context).textTheme.labelMedium),
+      const SizedBox(height: 2),
+      Text(
+        value,
+        style: Theme.of(
+          context,
+        ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+      ),
+    ],
+  );
+}
+
 class _FrequencyList extends StatelessWidget {
   const _FrequencyList({required this.title, required this.entries});
   final String title;
@@ -720,6 +766,12 @@ double _max(double left, double right) => left > right ? left : right;
 
 String _formatMetric(double value, String unit) =>
     '${NumberFormat.decimalPattern().format(value)} $unit';
+
+String _signedMetric(double value, String unit) => '${_signed(value)} $unit';
+
+String _signed(double value) => value >= 0
+    ? '+${NumberFormat.decimalPattern().format(value)}'
+    : NumberFormat.decimalPattern().format(value);
 
 String _recordLabel(String label, ProgressSetRecord record, String? unit) {
   final value = unit == null

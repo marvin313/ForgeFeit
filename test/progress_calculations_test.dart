@@ -152,6 +152,33 @@ void main() {
   });
 
   test(
+    'calendar ranges include their start date and do not fill missing dates',
+    () {
+      final expectedStarts = <ProgressTimeRange, DateTime>{
+        ProgressTimeRange.week: DateTime(2026, 7, 19),
+        ProgressTimeRange.month: DateTime(2026, 6, 25),
+        ProgressTimeRange.threeMonths: DateTime(2026, 4, 25),
+        ProgressTimeRange.sixMonths: DateTime(2026, 1, 25),
+        ProgressTimeRange.year: DateTime(2025, 7, 25),
+      };
+      for (final entry in expectedStarts.entries) {
+        final range = progressDateRange(entry.key, now);
+        expect(range.contains(entry.value), isTrue, reason: entry.key.label);
+        expect(
+          range.contains(entry.value.subtract(const Duration(minutes: 1))),
+          isFalse,
+          reason: entry.key.label,
+        );
+      }
+      final points = ProgressCalculator.exerciseWeightProgress(
+        bundles: [_bundle(id: 'one-point', endedAt: DateTime(2026, 7, 20))],
+        exerciseKey: 'bench',
+      );
+      expect(points, hasLength(1));
+    },
+  );
+
+  test(
     'strength graph uses stable exercise identity despite a renamed exercise',
     () {
       final oldName = _bundle(
@@ -178,14 +205,30 @@ void main() {
           _set(id: 'new-set', exerciseId: 'new-exercise', weight: 70, reps: 6),
         ],
       );
-
-      final points = ProgressCalculator.exerciseProgress(
-        bundles: [oldName, newName],
-        exerciseKey: 'custom-1',
-        metric: ExerciseProgressMetric.bestWeight,
+      final sameDay = _bundle(
+        id: 'same-day',
+        endedAt: DateTime(2026, 7, 22, 18),
+        exercise: _exercise(
+          id: 'same-day-exercise',
+          key: 'custom-1',
+          name: 'New name',
+        ),
+        sets: [
+          _set(
+            id: 'same-day-set',
+            exerciseId: 'same-day-exercise',
+            weight: 75,
+            reps: 3,
+          ),
+        ],
       );
 
-      expect(points.map((point) => point.value), [60, 70]);
+      final points = ProgressCalculator.exerciseWeightProgress(
+        bundles: [oldName, newName, sameDay],
+        exerciseKey: 'custom-1',
+      );
+
+      expect(points.map((point) => point.value), [60, 75]);
       expect(
         ProgressCalculator.exerciseOptions([oldName, newName]),
         hasLength(1),
@@ -219,6 +262,60 @@ void main() {
       expect(consistency.completedWorkingSets, 3);
     },
   );
+
+  test('weight chart keeps same-name custom exercise identities separate', () {
+    final first = _bundle(
+      id: 'first-identity',
+      endedAt: DateTime(2026, 7, 20),
+      exercise: _exercise(id: 'first-exercise', key: 'custom-a', name: 'Press'),
+      sets: [
+        _set(
+          id: 'first-set',
+          exerciseId: 'first-exercise',
+          weight: 40,
+          reps: 8,
+        ),
+      ],
+    );
+    final second = _bundle(
+      id: 'second-identity',
+      endedAt: DateTime(2026, 7, 21),
+      exercise: _exercise(
+        id: 'second-exercise',
+        key: 'custom-b',
+        name: 'Press',
+      ),
+      sets: [
+        _set(
+          id: 'second-set',
+          exerciseId: 'second-exercise',
+          weight: 70,
+          reps: 5,
+        ),
+      ],
+    );
+
+    expect(
+      ProgressCalculator.exerciseWeightProgress(
+        bundles: [first, second],
+        exerciseKey: 'custom-a',
+      ).map((point) => point.value),
+      [40],
+    );
+  });
+
+  test('weight chart summary uses first and last chronological points', () {
+    final summary = ProgressCalculator.weightProgressSummary([
+      ProgressPoint(date: DateTime(2026, 7, 1), value: 40, label: 'Bench'),
+      ProgressPoint(date: DateTime(2026, 7, 22), value: 47.5, label: 'Bench'),
+    ]);
+
+    expect(summary!.startingWeightKg, 40);
+    expect(summary.latestWeightKg, 47.5);
+    expect(summary.changeKg, 7.5);
+    expect(summary.changePercentage, 18.75);
+    expect(ProgressCalculator.weightProgressSummary(const []), isNull);
+  });
 }
 
 CompletedWorkoutBundle _bundle({
