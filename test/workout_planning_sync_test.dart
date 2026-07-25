@@ -130,7 +130,14 @@ void main() {
       expect(workoutRemote.workoutSets, hasLength(1));
       expect(planningRemote.splits, hasLength(1));
       expect(planningRemote.splitUpsertCalls, 1);
-      expect(await planningRepository.pendingCount(_userA), 3);
+      expect(planningRemote.templates, hasLength(1));
+      expect(planningRemote.templateExercises, hasLength(1));
+      expect(planningRemote.templateExerciseUpsertCalls, 1);
+      expect(await planningRepository.pendingCount(_userA), 1);
+      expect(
+        coordinator.currentStatus.errorMessage,
+        contains('Workout split upload failed'),
+      );
 
       final fullySynced = coordinator.statuses.firstWhere(
         (status) => status.state == SyncState.everythingSynced,
@@ -144,6 +151,7 @@ void main() {
       expect(planningRemote.templates, hasLength(1));
       expect(planningRemote.templateExercises, hasLength(1));
       expect(planningRemote.splitUpsertCalls, 2);
+      expect(planningRemote.templateExerciseUpsertCalls, 1);
       expect(
         planningRemote.splits.keys.single,
         split.id,
@@ -265,8 +273,13 @@ void main() {
 
       remote.failNextTemplateExerciseUpsert = true;
       await coordinator.sync(_userA);
-      expect(remote.templateExerciseUpsertCalls, 1);
-      expect(await planningRepository.pendingCount(_userA), greaterThan(0));
+      expect(remote.templateExerciseUpsertCalls, 4);
+      expect(await planningRepository.pendingCount(_userA), 1);
+      expect(remote.templateExercises, hasLength(3));
+      expect(
+        coordinator.currentStatus.errorMessage,
+        contains('Template exercise upload failed'),
+      );
       final failed = await planningRepository.pendingUploads(_userA);
       final retry = failed.singleWhere((upload) => upload.entityId == bench.id);
       expect(retry.entityId, bench.id);
@@ -357,7 +370,7 @@ void main() {
             PlannerSyncQueueCompanion.insert(
               id: '30000000-0000-4000-8000-000000009001',
               userId: _userA,
-              entityType: PlanningEntityType.templateExercise.wireValue,
+              entityType: 'legacy_unknown_entity',
               entityId: '30000000-0000-4000-8000-000000009002',
               entityVersion: 1,
               createdAt: now,
