@@ -26,14 +26,12 @@ available offline and can synchronise with Supabase when a session is signed in.
 
 ## Screenshots
 
-The screenshots are kept in the `README/` folder so the links work from the
-repository root on GitHub. The folder contains the showcase plus nine iPhone
-screens.
+The screenshots are stored in the `README/` folder. These links are repository-
+relative, so they work from the root README on GitHub and in GitHub Desktop.
 
 <p align="center">
   <img src="README/C503F7C5-4B9B-4087-AD2D-FA8CB2CD8608.png" width="900" alt="ForgeFit showcase" />
 </p>
-
 <p align="center">
   <img src="README/E562000B-E703-4575-97BA-78A337272580.png" width="240" alt="ForgeFit home" />
   <img src="README/BC19E327-495C-45CF-A2C4-ECE9B8998022.png" width="240" alt="ForgeFit templates" />
@@ -54,8 +52,8 @@ screens.
 
 ForgeFit includes **283** read-only built-in exercises. The catalogue supports
 aliases, keywords, and stable exercise identities. Progress uses
-`estimated_1rm_kg = weight_kg × (1 + repetitions / 30)`, rounded to three decimal
-places, with sensible validation for high-repetition sets.
+`estimated_1rm_kg = weight_kg * (1 + repetitions / 30)`, rounded to three
+decimal places, with sensible validation for high-repetition sets.
 
 Legacy Stage 1 quick logs remain readable. Remote restore uses 500-row pages
 with UUID-ordered pages. Retry delays start at 2 seconds, double after each
